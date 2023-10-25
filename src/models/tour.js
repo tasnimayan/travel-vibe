@@ -3,19 +3,28 @@ const mongoose = require('mongoose')
 
 const tourSchema = mongoose.Schema(
   {
+    user:{
+				type: mongoose.Schema.ObjectId,
+				ref: 'User',
+			},
     title: {type:String, trim:true},
     startLocation:{type:String, required:true},
     destination:{type:String},
     duration:{type:String},
     description:{type:String, trim:true},
-    maxPerson: {type:Number},
+    packages:[{}],
+    personCapacity: {type:Number},
     itinerary:[{}],
     images:[String],
     price:{type:Number, required:true, min:0},
     bookingMoney:{type:Number},
     rating:{type:Number, min:1, max:5},
     ratingQuantity: {type:Number, default:0},
-    startDate:{type:Date}
+    startDate:{type:Date},
+    startTime:{type:Date},
+    policy:{type:String},
+    react:[],
+    comments:[]
   },
   {
     timestamps:true,
@@ -24,6 +33,36 @@ const tourSchema = mongoose.Schema(
   }
 )
 
-const TourModel = mongoose.model('tours', tourSchema);
+tourSchema.index({ ratingsAverage: 1, price: 1 });
 
-module.exports = TourModel;
+tourSchema.virtual('reviews', {
+	ref: 'Review',
+	localField: '_id',
+	foreignField: 'tour',
+});
+
+tourSchema.virtual('bookings', {
+	ref: 'Booking',
+	localField: '_id',
+	foreignField: 'tour',
+});
+
+tourSchema.methods.toJSON = function () {
+	const tour = this.toObject();
+	delete tour.__v;
+	delete tour.id;
+
+	return tour;
+};
+
+tourSchema.pre(/^find/, function (next) {
+	this.populate({
+		path: 'user',
+		select: 'name email photo role',
+	});
+	next();
+});
+
+const Tour = mongoose.model('Tour', tourSchema);
+
+module.exports = Tour;

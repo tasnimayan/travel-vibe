@@ -1,2 +1,8 @@
-// Sign Up functionality is complete
-// In the signUp function => Add the email sending function when domain is purchased
+DotEnv variable names:
+PORT=
+DATABASE=
+JWT_SECRET=
+NODE_ENV=
+JWT_COOKIE_EXPIRES_IN=
+JWT_EXPIRES=
+HOST_MAIL=

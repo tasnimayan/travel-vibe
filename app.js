@@ -15,7 +15,7 @@ const app = express();
 
 // Import routers
 const userRouter = require('./src/routes/userRouter')
-// const tourRouter = require('./routes/tour-routes');
+const tourRouter = require('./src/routes/tourRouter');
 // const userRouter = require('./routes/user-routes');
 // const reviewRouter = require('./routes/review-routes');
 // const viewRouter = require('./routes/view-routes');
@@ -81,7 +81,7 @@ mongoose.connection.on('disconnected', () => {
 // })
 
 app.use('/api/users', userRouter);
-// app.use('/api/tours', tourRouter);
+app.use('/api/tours', tourRouter);
 // app.use('/api/reviews', reviewRouter);
 // app.use('/api/bookings', bookingRouter);
 // app.use('/', viewRouter);
