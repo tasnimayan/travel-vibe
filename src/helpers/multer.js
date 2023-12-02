@@ -28,6 +28,9 @@ const storage = multer.diskStorage(
       else if (file.fieldname === 'gallery') {
         destDir += `${role}/${mail}/uploads`;
       }
+      else if (file.fieldname === 'photos') {
+        destDir += `${role}/${mail}/uploads`;
+      }
       else {
         // Default to a general directory if no type is specified
         destDir += 'general/';
