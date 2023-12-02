@@ -45,7 +45,7 @@ reviewSchema.methods.toJSON = function () {
 };
 
 //* static method on Model to calculate & Update the average rating of a tour
-reviewSchema.statics.calcAverageRating = async function (tourId) {
+reviewSchema.statics.calcAverageRating = async (tourId) => {
 	// this  = Tour model
 
 	const stats = await this.aggregate([

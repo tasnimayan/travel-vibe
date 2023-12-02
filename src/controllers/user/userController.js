@@ -3,17 +3,18 @@ const mailSender = require('../../utils/email')
 const path = require('path')
 const crypto = require('crypto')
 
+
+/*
+1. User can create account         -Done
+2. User can Login to account      -Done
+3. User can update profile information  -Done
+4. User can reset password         -Done
+5. User can recover their account  -Done
+6. User can delete their account   -Done
+
+*/
+
 // In the signUp function  => Add the email sending function when domain is purchased
-// LogIn functionality is complete
-// Log out functionality is complete
-// User information update functionality is Complete
-// User authentication is complete
-
-// View profile functionality  completed  => yet need a modification / better coding
-// Update/ Reset password    =>complete
-// Forgot password    =>complete
-// Cookie expiry date for Tokens
-
 
 let cookieOptions = {
 	expires: new Date(
@@ -172,7 +173,7 @@ exports.forgotPassword = async (req, res) => {
       throw new Error();
     }
     const resetToken = await user.createPasswordResetToken();
-    console.log("====1")
+
     await user.save({ validateBeforeSave: false });
 
 
@@ -184,10 +185,6 @@ exports.forgotPassword = async (req, res) => {
 
     res.status(200).send({ message: 'Token sent to email', url: resetURL });
   } catch (err) {
-
-    // user.resetPasswordToken = undefined;
-    // user.resetPasswordExpires = undefined;
-    // await user.save({ validateBeforeSave: false });
     res.status(404).send({ message: 'Wrong credentials!' });
   }
 }
@@ -200,7 +197,6 @@ exports.resetPassword = async (req, res)=> {
       .update(req.params.token)
       .digest('hex');
     
-      console.log(hashedToken)
 
     // find user by hashed token & compare expiry
     const user = await User.findOne({
@@ -223,12 +219,9 @@ exports.resetPassword = async (req, res)=> {
     const token = await user.generateToken();
     res.cookie('jwt', token, cookieOptions);
 
-    // sending response object to user
-    res
-      .status(200)
-      .send({ message: 'Password updated successfully!', token });
+    res.status(200).send({ message: 'Password updated successfully!', token });
   } catch (err) {
-    res.status(400).send({ message: 'Something went wrong' });
+    res.status(400).send({ message: 'Password could not be updated' });
   }
 }
 
@@ -248,14 +241,3 @@ exports.deleteUser = async (req, res) =>{
 }
 
 
-
-/*
-1. User can create account         -Done
-2. User can Login to account      -Done
-3. User can update profile information  -Done
-4. User can reset password         -Done
-5. User can recover their account  -Done
-6. User can delete their account   -Done
-
-
-*/

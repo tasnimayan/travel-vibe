@@ -1,16 +1,22 @@
 const express = require('express')
 const router = express.Router()
-const { getAllTours, createTour, topFiveTours, longestFiveTours} = require('../controllers/tour/tourController')
+const { getAllTours, createTour, topFiveTours, longestFiveTours, getQueriedTours, getTour, updateTour, deleteTour} = require('../controllers/tour/tourController')
 const upload = require('../helpers/multer')
+const {isAuthorized, isAvailableFor} = require('../middlewares/auth')
 
 router.route('/')
   .get(getAllTours)
-  .post(upload.array('photos', 20),createTour);
+  .post(isAuthorized, isAvailableFor('org'), upload.array('photos', 20), createTour);
+
+router.route('/:id')
+  .get(getTour)
+  .post(isAuthorized, isAvailableFor('org'), upload.array('photos', 20), updateTour)
+  .patch(isAuthorized, isAvailableFor('org'), deleteTour)
 
 
 // popular
-router.route('/top-5-tours').post(topFiveTours, getAllTours);
-router.route('/longest-5-tours').post(longestFiveTours, getAllTours);
+router.route('/top-5-tours').post(topFiveTours, getQueriedTours);
+router.route('/longest-5-tours').post(longestFiveTours, getQueriedTours);
 
 
 

@@ -53,10 +53,6 @@ const userSchema = new mongoose.Schema(
 			maxLength: 99,
 		},
 
-		passwordChangedAt: Date,
-		resetPasswordToken: String,
-		resetPasswordExpires: Date,
-
 		photo: {
 			type: String,
 			default: 'default.jpg',
@@ -82,7 +78,7 @@ const userSchema = new mongoose.Schema(
 
 		role: {
 			type: String,
-			enum: ['user', 'guide', 'admin', 'organization'],
+			enum: ['user', 'guide', 'admin', 'org', 'hotel'],
 			default: 'user',
 		},
 
@@ -91,14 +87,12 @@ const userSchema = new mongoose.Schema(
 			default: true,
 		},
 
-		deactivatedAt: Date,
-		reactivatedAt: Date,
-
-		reactivateAccountToken: String,
-		reactivateAccountExpires: Date,
+		passwordChangedAt: Date,
+		resetPasswordToken: String,
+		resetPasswordExpires: Date,
 	},
 
-	{ timestamps: true,  }
+	{ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true }  }
 );
 
 
@@ -107,19 +101,17 @@ const userSchema = new mongoose.Schema(
 userSchema.methods.toJSON = function () {
 	const user = this.toObject();
 
-	if (user.role === 'user' || user.role === 'organization') {
+	if (user.role === 'user' || user.role === 'org') {
 		delete user.password;
 		delete user.passwordChangedAt;
 		delete user.resetPasswordToken;
 		delete user.resetPasswordExpires;
-		delete user.reactivateAccountToken;
-		delete user.reactivateAccountExpires;
-		delete user.deactivatedAt;
-		delete user.reactivatedAt;
 		delete user.createdAt;
 		delete user.updatedAt;
 		delete user.active;
 		delete user.token;
+		delete user.userReviews;
+		delete user.userTours;
 		delete user.__v;
 		delete user.id;
 	}
@@ -128,43 +120,37 @@ userSchema.methods.toJSON = function () {
 };
 
 
-// statics are class methods used on Model
+// Static methods that can be called on Model instead of instance of model
 userSchema.statics.loginUser = async (email, password) => {
-	//prototype error so we can have custom msg
-	function myError(msg) {
-		this.msg = msg;
-	}
-	myError.prototype = new Error();
 
 	const user = await User.findOne({ email });
 
 	if (!user || user.active === false) {
-		throw new myError('Account not active');
+		throw new Error('Account is not active');
 	}
 
 	const match = await user.comparePassword(password, user.password);
 
 	if (!match) {
-		throw new myError('Wrong credentials');
+		throw new Error("Password does not match");
 	}
 
 	return user;
 };
 
-
-//* statics are used on Model
+// Static method to validate Authentication Token
 userSchema.statics.validateToken = async function (token) {
 	const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
 	const user = await User.findOne({ _id: decoded._id });
 	if (!user) {
-		throw new Error();
+		throw new Error("Invalid token");
 	}
 
 	return user.toJSON();
 };
 
-//*  methods are used on documents
+// Custom method to generate token for authentication when user logs in or create account
 userSchema.methods.generateToken = async function () {
 	const user = this;
 
@@ -176,12 +162,6 @@ userSchema.methods.generateToken = async function () {
 	await user.save();
 
 	return token;
-};
-
-
-// Comparing password with hashed one
-userSchema.methods.comparePassword = async function (plainPw, userPw) {
-	return await bcrypt.compare(plainPw, userPw);
 };
 
 userSchema.methods.createPasswordResetToken = async function () {
@@ -197,19 +177,11 @@ userSchema.methods.createPasswordResetToken = async function () {
 	return resetToken;
 };
 
-// userSchema.methods.createReactivateAccountToken = async function () {
-// 	//create random string token to send to user via email
-// 	const token = crypto.randomBytes(32).toString('hex');
+// Comparing password with hashed one
+userSchema.methods.comparePassword = async function (plainPw, userPw) {
+	return await bcrypt.compare(plainPw, userPw);
+};
 
-// 	this.reactivateAccountToken = crypto
-// 		.createHash('sha256')
-// 		.update(token)
-// 		.digest('hex');
-
-// 	this.reactivateAccountExpires = Date.now() + 15 * 60 * 60;
-
-// 	return token;
-// };
 
 //* pre-save HASH hook --> works on create-save-update
 userSchema.pre('save', async function (next) {
@@ -221,24 +193,6 @@ userSchema.pre('save', async function (next) {
 	}
 	next();
 });
-
-//* QUERY MIDDLEWARE --> all queries starting with find
-// userSchema.pre(/^find/, function (next) {
-// 	this.fetchTime = Date.now();
-// 	next();
-// });
-// userSchema.post(/^find/, function (docs, next) {
-// 	console.log(`~~ USER query time is ${Date.now() - this.fetchTime}ms`);
-// 	next();
-// });
-
-
-
-
-
-
-
-
 
 
 const User = new mongoose.model('User', userSchema)

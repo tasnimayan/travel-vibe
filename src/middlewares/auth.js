@@ -26,8 +26,9 @@ module.exports.isAuthorized =	async (req, res, next) => {
 
 module.exports.isAvailableFor  = (...roles) => {
   return (req, res, next) => {
+
     if (!roles.includes(req.user.role)) {
-      return res.status(401).send();
+      return res.status(401).send({message:"This route is not for current user role"});
     }
     next();
   };

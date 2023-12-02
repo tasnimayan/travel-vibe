@@ -1,4 +1,5 @@
-const mongoose = require('mongoose')
+const mongoose = require('mongoose');
+const User = require('./user');
 
 
 const tourSchema = mongoose.Schema(

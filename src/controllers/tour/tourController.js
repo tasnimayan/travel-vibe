@@ -1,5 +1,6 @@
 const upload = require('../../helpers/multer.js');
-const Tour = require('../../models/tour.js')
+const Tour = require('../../models/tour.js');
+const User = require('../../models/user.js');
 
 //Tour Create Done
 // Tour get Done
@@ -29,7 +30,7 @@ exports.getAllTours = async (req, res)=> {
     if (tours.length === 0) {
       return res.status(200).send({ message: 'No results match this query' });
     }
-    res.status(200).send({ results: tours.length, tours });
+    res.status(200).send({ tours:tours });
   } catch (err) {
     res.status(400).send(err.message);
   }
@@ -71,10 +72,11 @@ exports.createTour = async (req, res) => {
 // Get Tour details with specific TourID
 exports.getTour = async (req, res)=>{
   try {
-    const tour = await Tour.findById(req.params.id).populate({
-      path: 'reviews',
-      select: '-__v -id',
-    });
+    const tour = await Tour.findById(req.params.id)
+    // .populate({
+    //   path: 'reviews',
+    //   select: '-__v -id',
+    // });
 
     if (!tour) {
       return res.status(404).send({ message: 'No tour found' });
@@ -89,6 +91,8 @@ exports.getTour = async (req, res)=>{
 exports.updateTour = async (req, res) =>{
   try {
     const id = req.params.id;
+    const photos = req.files.map(item => item.path.replace(/\\/g,'/'));
+    console.log(photos)
 
     const updateData = {
       title: req.body.title,
@@ -99,7 +103,7 @@ exports.updateTour = async (req, res) =>{
       packages: req.body.packages, 
       personCapacity: req.body.capacity,
       itinerary: req.body.itinerary, 
-      images: req.body.images,
+      images: photos,
       price: req.body.price, 
       bookingMoney: req.body.bookingMoney,
       startDate: req.body.startDate,
@@ -133,9 +137,23 @@ exports.deleteTour = async (req, res) =>{
   }
 }
 
+// To view the tour booking details
+exports.tourBookings = async (req, res) => {
+  try {
+    const tour = await Tour.findById(req.params.id).populate('bookings');
+
+    if (!tour) {
+      return res.status(404).send();
+    }
+
+    res.status(200).send(tour.bookings);
+  } catch (err) {
+    res.status(400).send(err.message);
+  }
+}
 
 
-async function getQueriedTours(req, res) {
+exports.getQueriedTours = async (req, res) => {
   const queryString = { ...req.query };
 
   // exclude everything other than match field -> later chain methods on found document
