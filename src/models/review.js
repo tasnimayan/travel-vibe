@@ -47,23 +47,21 @@ reviewSchema.methods.toJSON = function () {
 //* static method on Model to calculate & Update the average rating of a tour
 reviewSchema.statics.calcAverageRating = async (tourId) => {
 	// this  = Tour model
-
-	const stats = await this.aggregate([
+	const stats = await Review.aggregate([
 		{
 			$match: { tour: tourId },
 		},
 		{
 			$group: {
 				_id: '$tour',
-				numRatings: { $sum: 1 },
+				numOfRatings: { $sum: 1 },
 				avgRating: { $avg: '$rating' },
 			},
 		},
 	]);
-	console.log(stats);
 
 	await Tour.findByIdAndUpdate(tourId, {
-		ratingsQuantity: stats[0].numRatings,
+		ratingsQuantity: stats[0].numOfRatings,
 		ratingsAverage: stats[0].avgRating,
 	});
 };

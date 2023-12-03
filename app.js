@@ -73,13 +73,6 @@ mongoose.connection.on('disconnected', () => {
 });
 
 //*     ~~~~~     ROUTE HANDLERS     ~~~~~
-// const upload = require('./src/helpers/multer')
-
-// app.post('/files', upload.single('avatar'), (req, res)=>{
-// 	console.log(req.file);
-// 	res.send()
-// })
-
 app.use('/api/users', userRouter);
 app.use('/api/tours', tourRouter);
 // app.use('/api/reviews', reviewRouter);

@@ -1,6 +1,7 @@
 const express = require('express')
 const router = express.Router()
 const { getAllTours, createTour, topFiveTours, longestFiveTours, getQueriedTours, getTour, updateTour, deleteTour} = require('../controllers/tour/tourController')
+const {createReview, getAllReviews, getOneReview, updateReview, deleteReview} = require('../controllers/tour/reviewController')
 const upload = require('../helpers/multer')
 const {isAuthorized, isAvailableFor} = require('../middlewares/auth')
 
@@ -20,8 +21,17 @@ router.route('/longest-5-tours').post(longestFiveTours, getQueriedTours);
 
 
 
-  // nested and merged routes
-// router.use('/:id/reviews', reviewRouter);
-// router.use('/:id/bookings', bookingRouter);
+// Tour Review Routes 
+// api/tours/:id/
+router.route('/:id/reviews')
+  .get(getAllReviews)
+  .post(isAuthorized, isAvailableFor("user","org"), createReview);
+
+router.route('/:id/reviews/:revId')
+  .get(getOneReview)
+  .post(isAuthorized, isAvailableFor("user","org"), updateReview)
+  .patch(isAuthorized, isAvailableFor("user","org"), deleteReview);
+  
+
 
 module.exports = router;
