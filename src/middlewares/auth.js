@@ -16,7 +16,6 @@ module.exports.isAuthorized =	async (req, res, next) => {
 
     req.token = token;
     req.user = user;
-    res.locals.user = user;
 
     next();
   } catch (err) {

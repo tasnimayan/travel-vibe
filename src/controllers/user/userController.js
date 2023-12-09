@@ -47,6 +47,7 @@ exports.signUp = async (req, res)=> {
       .send({ message: 'User created successfully!', user, token });
   }
   catch (err) {
+    console.log(err)
     res.status(400).send({ error: err.message });
   }
 }
@@ -59,7 +60,7 @@ exports.loginUser = async (req, res) =>{
     const user = await User.loginUser(email, password);
 
     if (!user) {
-      return res.status(401).send();
+      return res.status(401).send({message:"No user found"});
     }
     const token = await user.generateToken();
     res.cookie('jwt', token, cookieOptions);
@@ -241,3 +242,26 @@ exports.deleteUser = async (req, res) =>{
 }
 
 
+// ========== Account deletion Functionalities ===========
+exports.getUserProfile = async (req, res) =>{
+  let matchStage = {$match: {_id:req.user._id}}
+  let joinWithBrandStage = {$lookup:{from:'tours', localField:"userTours", foreignField:"_id", as:"tours"}}
+  let unwindBrandStage = {$unwind:"$userTours"}
+  let projectionStage = {$project:{'_id':0, '__v':0, 'password':0, 'active':0, 'createdAt':0, 'updatedAt':0, 'tours._id':0, 'tours.__v':0, 'tours.createdAt':0, 'tours.updatedAt':0,}}
+
+  try {
+    const user =await User.aggregate([
+      matchStage,
+      joinWithBrandStage,
+      unwindBrandStage,
+      projectionStage
+    ])
+    if (!user) {
+      return res.status(404).send({ message: 'No user found!' });
+    }
+
+    res.status(200).send(user);
+  } catch (err) {
+    res.status(400).send({ error: err.message });
+  }
+}

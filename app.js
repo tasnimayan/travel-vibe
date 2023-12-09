@@ -10,6 +10,7 @@ const morgan = require('morgan');
 const mongoose = require('mongoose')
 
 
+
 // Express App
 const app = express();
 
@@ -73,6 +74,8 @@ mongoose.connection.on('disconnected', () => {
 });
 
 //*     ~~~~~     ROUTE HANDLERS     ~~~~~
+
+
 app.use('/api/users', userRouter);
 app.use('/api/tours', tourRouter);
 // app.use('/api/reviews', reviewRouter);

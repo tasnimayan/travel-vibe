@@ -1,11 +1,8 @@
 const upload = require('../../helpers/multer.js');
 const Tour = require('../../models/tour.js');
 const User = require('../../models/user.js');
+const mongoose = require('mongoose')
 
-//Tour Create Done
-// Tour get Done
-// Tour update Done
-// Tour Delete 
 
 exports.topFiveTours = async (req, res, next) =>{
   req.query.limit = '5';
@@ -40,9 +37,10 @@ exports.getAllTours = async (req, res)=> {
 exports.createTour = async (req, res) => {
 
   const photos = req.files;
+  const userId = new mongoose.Types.ObjectId(req.user._id)
   try {
     const tour = await Tour.create({
-      user: req.body.user,
+      user: userId,
       title: req.body.title,
       startLocation: req.body.startLocation,
       destination: req.body.destination,
@@ -92,7 +90,6 @@ exports.updateTour = async (req, res) =>{
   try {
     const id = req.params.id;
     const photos = req.files.map(item => item.path.replace(/\\/g,'/'));
-    console.log(photos)
 
     const updateData = {
       title: req.body.title,
@@ -111,6 +108,8 @@ exports.updateTour = async (req, res) =>{
       policy: req.body.policy,
     }
 
+    // Set the search function that the owner of the tour can modify the tour
+    const userId = new mongoose.Types.ObjectId(req.user._id)
     const tour = await Tour.findByIdAndUpdate( id, updateData,{new: true, runValidators: true,});
 
     if (!tour) {

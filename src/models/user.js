@@ -1,10 +1,9 @@
 const mongoose = require('mongoose')
 const { isEmail } = require('validator');
-const bcrypt = require('bcrypt')
+// const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken');
 const { reset } = require('nodemon');
 const crypto = require('crypto')
-
 
 
 
@@ -47,10 +46,15 @@ const userSchema = new mongoose.Schema(
 		},
 
 		address:{
-			type: String,
-			trim: true,
-			minLength: 2,
-			maxLength: 99,
+			country: {type:String},
+			city:{type:String},
+			add:{
+				type: String,
+				trim: true,
+				minLength: 2,
+				maxLength: 99
+			}
+
 		},
 
 		photo: {
@@ -60,14 +64,14 @@ const userSchema = new mongoose.Schema(
 
 		userReviews: [
 			{
-				type: mongoose.Schema.ObjectId,
+				type: mongoose.Schema.Types.ObjectId,
 				ref: 'Review',
 			},
 		],
 
 		userTours: [
 			{
-				type: mongoose.Schema.ObjectId,
+				type: mongoose.Schema.Types.ObjectId,
 				ref: 'Tour',
 			},
 		],
@@ -177,23 +181,48 @@ userSchema.methods.createPasswordResetToken = async function () {
 	return resetToken;
 };
 
+// // Comparing password with hashed one
+// userSchema.methods.comparePassword = async function (plainPw, userPw) {
+// 	return await bcrypt.compare(plainPw, userPw);
+// };
+
+
+// //* pre-save HASH hook --> works on create-save-update
+// userSchema.pre('save', async function (next) {
+// 	const user = this;
+
+// 	if (user.isModified('password') || user.isNew) {
+// 		user.password = await bcrypt.hash(user.password, 10);
+// 		user.passwordChangedAt = Date.now() - 1000;
+// 	}
+// 	next();
+// });
+
+// =================== This code block is to replace bcrypt that does not supported in shared hosting
 // Comparing password with hashed one
 userSchema.methods.comparePassword = async function (plainPw, userPw) {
-	return await bcrypt.compare(plainPw, userPw);
+	if (hashPassword(plainPw) === userPw) {
+		return true;
+	}
+	return false;
 };
 
 
+const hashPassword = password => {
+	return crypto.createHash('sha256').update(password).digest('hex')
+}
 //* pre-save HASH hook --> works on create-save-update
 userSchema.pre('save', async function (next) {
 	const user = this;
-
+	
 	if (user.isModified('password') || user.isNew) {
-		user.password = await bcrypt.hash(user.password, 10);
+		user.password = await hashPassword(user.password);
 		user.passwordChangedAt = Date.now() - 1000;
 	}
 	next();
 });
 
+// ==============================================
 
 const User = new mongoose.model('User', userSchema)
 module.exports = User;

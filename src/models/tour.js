@@ -5,10 +5,11 @@ const User = require('./user');
 const tourSchema = mongoose.Schema(
   {
     user:{
-				type: mongoose.Schema.ObjectId,
+				type: mongoose.Schema.Types.ObjectId,
 				ref: 'User',
+        required:true,
 			},
-    title: {type:String, trim:true},
+    title: {type:String, trim:true, required:true},
     startLocation:{type:String, required:true},
     destination:{type:String},
     duration:{type:String},
@@ -56,10 +57,21 @@ tourSchema.methods.toJSON = function () {
 	return tour;
 };
 
+//  Saves the tour data to the user's userTours field
+tourSchema.pre('save', async function (next) {
+	const user = await User.findOne({_id:this.user});
+	if ( this.isNew) {
+		user.userTours.push(this._id);
+    await user.save()
+  }
+	next();
+});
+
+// Populate relational data to the output
 tourSchema.pre(/^find/, function (next) {
 	this.populate({
 		path: 'user',
-		select: 'name email photo role',
+		select: 'name photo address',
 	});
 	next();
 });
