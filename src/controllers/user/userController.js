@@ -32,7 +32,7 @@ exports.signUp = async (req, res)=> {
     const user = await User.create(userData);
 
     if (!user) {
-      return res.status(400).send();
+      return res.status(400).send({message:"Couldn't create user"});
     }
 
     // Log user in and send jwt
@@ -58,6 +58,7 @@ exports.loginUser = async (req, res) =>{
 
   try {
     const user = await User.loginUser(email, password);
+    console.log(user)
 
     if (!user) {
       return res.status(401).send({message:"No user found"});
@@ -105,13 +106,13 @@ module.exports.getUser = async (req, res)=> {
 }
 
 // ========== User Data Update Functionalities ===========
-exports.updateUser = async (req, res)=> {
-  try {
+exports.updateUser = async (req, res)=> { 
+  const baseURL = "https://www.tv.tasnimayan.dev/"
 
-    
+  try {
     // handling request object
     const updates = Object.keys(req.body);
-    const allowedUpdates = ['name', 'address', 'photo', 'role'];
+    const allowedUpdates = ['name', 'address', "active"];
     let validUpdates = {};
 
     // filtering updates
@@ -124,7 +125,7 @@ exports.updateUser = async (req, res)=> {
 
     // saving photos
     if (req.file) {
-      validUpdates.photo =req.file.path;
+      validUpdates.photo = baseURL + req.file.path.replace(/\\/g,'/').slice(6);
     }
 
     const user = await User.findByIdAndUpdate(req.user._id, validUpdates, {
@@ -193,10 +194,11 @@ exports.forgotPassword = async (req, res) => {
 exports.resetPassword = async (req, res)=> {
   try {
     // hash the token in url
-    const hashedToken = crypto
-      .createHash('sha256')
-      .update(req.params.token)
-      .digest('hex');
+    const hashedToken = req.params.token
+    // crypto
+    //   .createHash('sha256')
+    //   .update(req.params.token)
+    //   .digest('hex');
     
 
     // find user by hashed token & compare expiry
@@ -206,7 +208,7 @@ exports.resetPassword = async (req, res)=> {
     });
 
     if (!user) {
-      return res.status(404).send({ message: 'No user found!' });
+      return res.status(404).send({ message: 'Does not match!' });
     }
     //updating password and reset tokens
     user.password = req.body.password;

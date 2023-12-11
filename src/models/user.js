@@ -6,7 +6,6 @@ const { reset } = require('nodemon');
 const crypto = require('crypto')
 
 
-
 // User password update does not triggers pre method
 
 // Creating User Schema
@@ -200,6 +199,7 @@ userSchema.methods.createPasswordResetToken = async function () {
 
 // =================== This code block is to replace bcrypt that does not supported in shared hosting
 // Comparing password with hashed one
+
 userSchema.methods.comparePassword = async function (plainPw, userPw) {
 	if (hashPassword(plainPw) === userPw) {
 		return true;

@@ -27,7 +27,6 @@ const tourRouter = require('./src/routes/tourRouter');
 
 //    =========    MIDDLEWARE     ========
 
-console.log(path.join(__dirname, './public'));
 app.use(express.static(path.join(__dirname, './public')));
 
 const limiter = rateLimit({
@@ -74,7 +73,9 @@ mongoose.connection.on('disconnected', () => {
 });
 
 //*     ~~~~~     ROUTE HANDLERS     ~~~~~
-
+app.get('/api', (req, res)=>{
+	res.status(200).send({message:"API is currently running"})
+})
 
 app.use('/api/users', userRouter);
 app.use('/api/tours', tourRouter);

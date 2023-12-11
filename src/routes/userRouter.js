@@ -10,19 +10,11 @@ router.post('/signup', signUp)
 router.post('/login', loginUser)
 router.get('/logout', isAuthorized, isAvailableFor('user', 'org', 'admin'), logoutUser)
 router.get('/profile', isAuthorized, isAvailableFor('user', 'org'), getUserProfile)  // User profile
-router.post('/profile/update', isAuthorized, isAvailableFor('user', 'org'), upload.single('avatar'), updateUser)  // User profile
+router.post('/profile/update', isAuthorized, isAvailableFor('user', 'org'), upload.single('avatar'), updateUser)
 router.post('/update/password', isAuthorized, updatePassword)
-router.get('/account/delete/', isAuthorized, deleteUser)
+router.patch('/account/delete/', isAuthorized, deleteUser)
 router.post('/account/recover/', forgotPassword)
 router.patch('/account/recover/:token', resetPassword);
-
-
-
-router.post('/files', isAuthorized, upload.fields([{name:'avatar'}, {name:'gallery'}]), (req, res)=>{
-	console.log(req.files.gallery);
-	res.send()
-})
-
 
 
 module.exports = router;

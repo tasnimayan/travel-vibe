@@ -12,8 +12,6 @@ const fs = require('fs')
 
 // upload.none()   for text only form data
 
-
-
 const storage = multer.diskStorage(
   {
     destination: function(req, file, cb){

@@ -17,13 +17,13 @@ const reviewSchema = new mongoose.Schema(
 		},
 
 		tour: {
-			type: mongoose.Schema.ObjectId,
+			type: mongoose.Schema.Types.ObjectId,
 			ref: 'Tour',
 			required: true,
 		},
 
 		user: {
-			type: mongoose.Schema.ObjectId,
+			type: mongoose.Schema.Types.ObjectId,
 			ref: 'User',
 			required: true,
 		},
@@ -81,5 +81,5 @@ reviewSchema.post('save', function () {
 	this.constructor.calcAverageRating(this.tour);
 });
 
-const Review = mongoose.model('Review', reviewSchema);
+const Review = mongoose.model('reviews', reviewSchema);
 module.exports = Review;

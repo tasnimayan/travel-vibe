@@ -35,8 +35,9 @@ exports.getAllTours = async (req, res)=> {
 
 // Creating New tour
 exports.createTour = async (req, res) => {
+  const baseURL = "https://www.tv.tasnimayan.dev/"
+  const photos = req.files.map(item => baseURL+item.path.replace(/\\/g,'/').slice(6));
 
-  const photos = req.files;
   const userId = new mongoose.Types.ObjectId(req.user._id)
   try {
     const tour = await Tour.create({
@@ -87,34 +88,32 @@ exports.getTour = async (req, res)=>{
 
 // Update tour with TourID
 exports.updateTour = async (req, res) =>{
+  const baseURL = "https://www.tv.tasnimayan.dev/"
   try {
-    const id = req.params.id;
-    const photos = req.files.map(item => item.path.replace(/\\/g,'/'));
+    const tourId = new mongoose.Types.ObjectId(req.params.id);
+    const userId = new mongoose.Types.ObjectId(req.user._id);
 
-    const updateData = {
-      title: req.body.title,
-      startLocation: req.body.startLocation,
-      destination: req.body.destination,
-      duration: req.body.duration, 
-      description: req.body.description,
-      packages: req.body.packages, 
-      personCapacity: req.body.capacity,
-      itinerary: req.body.itinerary, 
-      images: photos,
-      price: req.body.price, 
-      bookingMoney: req.body.bookingMoney,
-      startDate: req.body.startDate,
-      startTime: req.body.startTime,
-      policy: req.body.policy,
-    }
+    const photos = req.files.map(item => baseURL+item.path.replace(/\\/g,'/').slice(6));
 
-    // Set the search function that the owner of the tour can modify the tour
-    const userId = new mongoose.Types.ObjectId(req.user._id)
-    const tour = await Tour.findByIdAndUpdate( id, updateData,{new: true, runValidators: true,});
+    const updateFields = ["title", "startLocation", "destination", "duration", "description", "packages","personCapacity", "itinerary", "price", "bookingMoney", "startDate", "startTime", "policy",]
+  
 
+    // const tour = await Tour.findByIdAndUpdate( id, updateData,{new: true, runValidators: true,});
+    const tour = await Tour.findOne({_id:tourId, user:{$eq:userId}});
+    
     if (!tour) {
       return res.status(404).send({ message: 'Tour not found' });
     }
+    
+    for(key in req.body){
+      if(updateFields.includes(key)){
+        tour[key] = req.body.key;
+      }
+    }
+
+    // tour.images.push(...photos)
+    tour.images = photos
+    await tour.save();
 
     res.status(200).send({ message: 'Tour updated!', tour });
   } catch (err) {
@@ -125,7 +124,11 @@ exports.updateTour = async (req, res) =>{
 // Delete tour with TourID
 exports.deleteTour = async (req, res) =>{
   try {
-    const tour = await Tour.findByIdAndDelete(req.params.id);
+    const tourId = new mongoose.Types.ObjectId(req.params.id);
+    const userId = new mongoose.Types.ObjectId(req.user._id);
+
+    const tour = await Tour.deleteOne({_id:tourId, user:{$eq:userId}});
+    const rem = await User.updateOne({_id:userId}, {$pull: {userTours: tourId}})
 
     if (!tour) {
       return res.status(404).send({message:"Error deleting tour"});
@@ -150,7 +153,6 @@ exports.tourBookings = async (req, res) => {
     res.status(400).send(err.message);
   }
 }
-
 
 exports.getQueriedTours = async (req, res) => {
   const queryString = { ...req.query };
@@ -192,3 +194,5 @@ exports.getQueriedTours = async (req, res) => {
     res.status(400).send(err.message);
   }
 }
+
+

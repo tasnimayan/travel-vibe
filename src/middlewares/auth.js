@@ -3,11 +3,11 @@ const User = require('../models/user')
 
 module.exports.isAuthorized =	async (req, res, next) => {
   try {
-    // if (!req.headers.authorization && !req.headers.authorization.startsWith('Bearer'))
-    // {return res.status(401).send()}
-    // const token = req.headers.authorization.split(' ')[1];
+    if (!req.headers.authorization && !req.headers.authorization.startsWith('Bearer'))
+    {return res.status(401).send()}
+    const token = req.headers.authorization.split(' ')[1];
 
-    const token = req.cookies.jwt;
+    // const token = req.cookies.jwt;
     const user = await User.validateToken(token);
 
     if (!token || !user) {
