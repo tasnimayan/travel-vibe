@@ -2,6 +2,7 @@ const User = require('../../models/user')
 const mailSender = require('../../utils/email')
 const path = require('path')
 const crypto = require('crypto')
+const mongoose = require('mongoose')
 
 
 /*
@@ -37,7 +38,7 @@ exports.signUp = async (req, res)=> {
 
     // Log user in and send jwt
     const token = await user.generateToken(user._id);
-    res.cookie('jwt', token, cookieOptions);
+    res.cookie('tvUserToken', token, cookieOptions);
 
     // Send a welcome email to a new user
     // mailSender(user, "welcome");
@@ -58,13 +59,12 @@ exports.loginUser = async (req, res) =>{
 
   try {
     const user = await User.loginUser(email, password);
-    console.log(user)
 
     if (!user) {
       return res.status(401).send({message:"No user found"});
     }
     const token = await user.generateToken();
-    res.cookie('jwt', token, cookieOptions);
+    res.cookie('tvUserToken', token, cookieOptions);
 
     res.status(200).send({ message: 'Login successful', user, token });
   } catch (err) {
@@ -76,7 +76,7 @@ exports.loginUser = async (req, res) =>{
 module.exports.logoutUser = async (req, res) => {
   try {
     // Create fake token to cookie
-    res.cookie('jwt', 'nothing', {
+    res.cookie('tvUserToken', 'nothing', {
       expires: new Date(Date.now() + 10_000),
       httpOnly: true,
     });
@@ -107,7 +107,7 @@ module.exports.getUser = async (req, res)=> {
 
 // ========== User Data Update Functionalities ===========
 exports.updateUser = async (req, res)=> { 
-  const baseURL = "https://www.tv.tasnimayan.dev/"
+  const baseURL = "https://www.tv.tasnimayan.dev"
 
   try {
     // handling request object
@@ -194,12 +194,10 @@ exports.forgotPassword = async (req, res) => {
 exports.resetPassword = async (req, res)=> {
   try {
     // hash the token in url
-    const hashedToken = req.params.token
-    // crypto
-    //   .createHash('sha256')
-    //   .update(req.params.token)
-    //   .digest('hex');
-    
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(req.params.token)
+      .digest('hex');
 
     // find user by hashed token & compare expiry
     const user = await User.findOne({
@@ -243,26 +241,28 @@ exports.deleteUser = async (req, res) =>{
   }
 }
 
-
 // ========== Account deletion Functionalities ===========
 exports.getUserProfile = async (req, res) =>{
-  let matchStage = {$match: {_id:req.user._id}}
-  let joinWithBrandStage = {$lookup:{from:'tours', localField:"userTours", foreignField:"_id", as:"tours"}}
-  let unwindBrandStage = {$unwind:"$userTours"}
+
+  const userId = new mongoose.Types.ObjectId(req.user._id)
+  let matchStage = {$match: {_id:userId}}
+  let joinWithTourStage = {$lookup:{from:'tours', localField:"userTours", foreignField:"_id", as:"tours"}}
+  let unwindTourStage = {$unwind:"$userTours"}
   let projectionStage = {$project:{'_id':0, '__v':0, 'password':0, 'active':0, 'createdAt':0, 'updatedAt':0, 'tours._id':0, 'tours.__v':0, 'tours.createdAt':0, 'tours.updatedAt':0,}}
 
   try {
     const user =await User.aggregate([
       matchStage,
-      joinWithBrandStage,
-      unwindBrandStage,
+      joinWithTourStage,
+      unwindTourStage,
       projectionStage
     ])
+
     if (!user) {
       return res.status(404).send({ message: 'No user found!' });
     }
 
-    res.status(200).send(user);
+    res.status(200).send({data:user});
   } catch (err) {
     res.status(400).send({ error: err.message });
   }

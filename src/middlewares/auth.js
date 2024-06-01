@@ -3,8 +3,9 @@ const User = require('../models/user')
 
 module.exports.isAuthorized =	async (req, res, next) => {
   try {
-    if (!req.headers.authorization && !req.headers.authorization.startsWith('Bearer'))
-    {return res.status(401).send()}
+    if (!req.headers.authorization && !req.headers.authorization?.startsWith('Bearer'))
+    {return res.status(401).send({message:"Authentication Failed"})}
+    
     const token = req.headers.authorization.split(' ')[1];
 
     // const token = req.cookies.jwt;
@@ -19,7 +20,7 @@ module.exports.isAuthorized =	async (req, res, next) => {
 
     next();
   } catch (err) {
-    res.status(401).send();
+    res.status(401).send({message:err.message});
   }
 }
 

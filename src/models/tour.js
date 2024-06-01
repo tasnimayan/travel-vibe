@@ -1,32 +1,51 @@
 const mongoose = require('mongoose');
-const User = require('./user');
+const Organization = require('./organization')
 
 
 const tourSchema = mongoose.Schema(
   {
-    user:{
-				type: mongoose.Schema.Types.ObjectId,
-				ref: 'User',
-        required:true,
-			},
+    orgId:{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Organization',
+      required:true,
+		},
+    category:{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Category',
+      required:true,
+		},
     title: {type:String, trim:true, required:true},
     startLocation:{type:String, required:true},
     destination:{type:String},
     duration:{type:String},
     description:{type:String, trim:true},
-    packages:[{}],
+    packages:[
+      {
+        name: String,
+        description: String,
+        price: Number
+      }
+    ],
     personCapacity: {type:Number},
-    itinerary:[{}],
+    itinerary:[
+      {
+        day: Number,
+        activity: String,
+        description: String
+      }
+    ],
     images:[String],
     price:{type:Number, required:true, min:0},
     bookingMoney:{type:Number},
-    ratingsAverage:{type:Number, min:1, max:5, set: val => Math.round(val * 10) / 10,},
+    ratingsAverage:{type:Number, min:1, max:5, set: val => ((val * 10) / 10).toFixed(2)},
     ratingsQuantity: {type:Number, default:0},
     startDate:{type:Date},
     startTime:{type:Date},
     policy:{type:String},
     react:[],
-    comments:[]
+    comments:[],
+    country:{type:String},
+    discountRate: {type:Number, default:0}
   },
   {
     timestamps:true,
@@ -35,7 +54,7 @@ const tourSchema = mongoose.Schema(
   }
 )
 
-tourSchema.index({ ratingsAverage: 1, price: 1 });
+tourSchema.index({ startDate: 1, destination: 1 });
 
 tourSchema.virtual('reviews', {
 	ref: 'Review',
@@ -49,20 +68,28 @@ tourSchema.virtual('bookings', {
 	foreignField: 'tour',
 });
 
+tourSchema.virtual('finalPrice').get(()=> {
+  return this.price - (this.discountRate || 0);
+});
+
+tourSchema.methods.isDiscounted = ()=> {
+  return this.discountRate > 0;
+};
+
+
 tourSchema.methods.toJSON = function () {
 	const tour = this.toObject();
 	delete tour.__v;
-	delete tour.id;
 
 	return tour;
 };
 
 //  Saves the tour data to the user's userTours field
 tourSchema.pre('save', async function (next) {
-	const user = await User.findOne({_id:this.user});
+	const org = await Organization.findOne({_id:this.orgId});
 	if ( this.isNew) {
-		user.userTours.push(this._id);
-    await user.save()
+		org.tours.push(this._id);
+    await org.save()
   }
 	next();
 });
@@ -70,7 +97,7 @@ tourSchema.pre('save', async function (next) {
 // Populate relational data to the output
 tourSchema.pre(/^find/, function (next) {
 	this.populate({
-		path: 'user',
+		path: 'orgId',
 		select: 'name photo address',
 	});
 	next();

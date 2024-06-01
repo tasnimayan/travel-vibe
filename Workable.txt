@@ -1,0 +1,95 @@
+=========== User Routes ============
+'/signup'
+'/login'
+'/logout'
+'/profile'
+'/profile/update'
+'/update/password'
+'/account/delete/'
+'/account/recover/'
+'/account/recover/:token'
+
+
+=========== Tour Routes ==========
+- "api/tours/"
+    .get => Get Tours
+    .post => Create Tour
+
+- "api/tours/search"  get => Searched Tours
+- "/discount" get => Discounted Tours
+
+("/featured")
+("/offers")
+("/top-location")
+("/places")
+("/category")
+("/query")
+
+'api/tours/tour:id'
+    get(getTour)   - get tour details(for all user)
+    post(updateTour)  - update tour details(For organization)
+    patch(deleteTour) - delete tour (For organization)
+
+
+'api/tours/top-5-tours'
+  .post(topFiveTours, getQueriedTours);
+'api/tours/longest-5-tours'
+  .post(longestFiveTours, getQueriedTours);
+
+
+
+
+// Tour Review Routes 
+// api/tours/
+router.route('/:tourId/reviews')
+  .get(getAllReviews)
+  .post(isAuthorized, isAvailableFor("user"), createReview);
+
+router.route('/:tourId/reviews/:revId')
+  .post(isAuthorized, isAvailableFor("user"), updateReview)
+  .patch(isAuthorized, isAvailableFor("user"), deleteReview);
+  
+======================= Completed Tasks ======================
+$$ all tour packages (list of 6-10) (query with pagination)
+  get ==>"api/tours?page=1" (modify current)
+
+$$ explore nearby tours  / query by country  - send users current country and send with parameter
+  get ==> "api/tours/search?location=safari&limit=1&page=2"
+
+$$ country wise tour packages (query over country + give 10 list) - send country name with parameter and get tours (limit 6) set limit parameter to path
+  gte ==> "api/tours/search?country=BD&limit=1&page=2"  (defined)
+
+$$ Top searched destination tours from a specific date (for slider/ list of 10)
+  get ==>"api/tours/search?location=Dhaka&startDate=yyyy/mm/dd" (defined)
+
+$$ discounted tour packages list (list of 5)             - get tours that offers discounts ()
+  get ==> "api/tours/discount?limit=5"
+
+$$ specific tour details
+  get ==>"api/tours/tour/:tourId"
+
+$$ Type of tour (category list)
+  get ==>"api/v1/category"
+
+$$ Top searched locations (first 10 locations)
+  get ==> "api/tours/top-location"  sort by ascending order
+
+
+============== For Home Page =============
+# Most popular/advertised tour package (top 5)          - get popular/advertised tours (limit 6)
+  get ==> "api/tours/featured?limit=6"
+
+# Offer packages (list of offers)                       - get offer images (limit 4)
+  get ==> "api/tours/offers"
+
+============== For Tour Page =============
+Trending search (search by tour place name) with query merging   -location, price range, duration(days count)
+  get ==>"api/tours/query?location=dhaka&price=4000&duration=4"  (limit 10)
+
+# category by place (all place category)
+  get ==>"api/tours/places"  (limit 20)
+
+
+
+Add category field data to Tour collection
+Join user and category data to tour

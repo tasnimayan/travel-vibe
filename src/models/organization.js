@@ -8,7 +8,7 @@ const crypto = require('crypto')
 // User password update does not triggers pre method
 
 // Creating User Schema
-const userSchema = new mongoose.Schema(
+const organizationSchema = new mongoose.Schema(
 	{
 		name: {
 			type: String,
@@ -67,7 +67,7 @@ const userSchema = new mongoose.Schema(
 			},
 		],
 
-		userTours: [
+		tours: [
 			{
 				type: mongoose.Schema.Types.ObjectId,
 				ref: 'Tour',
@@ -100,38 +100,38 @@ const userSchema = new mongoose.Schema(
 
 
 // Method to hide unnecessary fields to 'user' role 
-userSchema.methods.toJSON = function () {
-	const user = this.toObject();
+organizationSchema.methods.toJSON = function () {
+	const org = this.toObject();
 
-	if (user.role === 'user' || user.role === 'org') {
-		delete user.password;
-		delete user.passwordChangedAt;
-		delete user.resetPasswordToken;
-		delete user.resetPasswordExpires;
-		delete user.createdAt;
-		delete user.updatedAt;
-		delete user.active;
-		delete user.token;
-		delete user.userReviews;
-		delete user.userTours;
-		delete user.__v;
-		delete user.id;
+	if (org.role === 'org' || org.role === 'org') {
+		delete org.password;
+		delete org.passwordChangedAt;
+		delete org.resetPasswordToken;
+		delete org.resetPasswordExpires;
+		delete org.createdAt;
+		delete org.updatedAt;
+		delete org.active;
+		delete org.token;
+		delete org.userReviews;
+		delete org.userTours;
+		delete org.__v;
+		delete org.id;
 	}
 
-	return user;
+	return org;
 };
 
 
 // Static methods that can be called on Model instead of instance of model
-userSchema.statics.loginUser = async (email, password) => {
+organizationSchema.statics.loginUser = async (email, password) => {
 
-	const user = await User.findOne({ email });
+	const org = await Organization.findOne({ email });
 
-	if (!user || user.active === false) {
+	if (!org || org.active === false) {
 		throw new Error('Account is not active');
 	}
 
-	const match = await user.comparePassword(password, user.password);
+	const match = await org.comparePassword(password, org.password);
 
 	if (!match) {
 		throw new Error("Password does not match");
@@ -141,32 +141,32 @@ userSchema.statics.loginUser = async (email, password) => {
 };
 
 // Static method to validate Authentication Token
-userSchema.statics.validateToken = async function (token) {
+organizationSchema.statics.validateToken = async function (token) {
 	const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-	const user = await User.findOne({ _id: decoded._id });
-	if (!user) {
+	const org = await Organization.findOne({ _id: decoded._id });
+	if (!org) {
 		throw new Error("Invalid token");
 	}
 
-	return user.toJSON();
+	return org.toJSON();
 };
 
 // Custom method to generate token for authentication when user logs in or create account
-userSchema.methods.generateToken = async function () {
-	const user = this;
+organizationSchema.methods.generateToken = async function () {
+	const org = this;
 
-	const token = jwt.sign({ _id: user._id.toString() }, process.env.JWT_SECRET, {
+	const token = jwt.sign({ _id: org._id.toString() }, process.env.JWT_SECRET, {
 		expiresIn: process.env.JWT_EXPIRES,
 	});
 
-	user.token = token;
-	await user.save();
+	org.token = token;
+	await org.save();
 
 	return token;
 };
 
-userSchema.methods.createPasswordResetToken = async function () {
+organizationSchema.methods.createPasswordResetToken = async function () {
 	const resetToken = crypto.randomBytes(32).toString('hex');
 
 	//hashing the reset token
@@ -199,7 +199,7 @@ userSchema.methods.createPasswordResetToken = async function () {
 // =================== This code block is to replace bcrypt that does not supported in shared hosting
 // Comparing password with hashed one
 
-userSchema.methods.comparePassword = async function (plainPw, userPw) {
+organizationSchema.methods.comparePassword = async function (plainPw, userPw) {
 	if (hashPassword(plainPw) === userPw) {
 		return true;
 	}
@@ -211,17 +211,17 @@ const hashPassword = password => {
 	return crypto.createHash('sha256').update(password).digest('hex')
 }
 //* pre-save HASH hook --> works on create-save-update
-userSchema.pre('save', async function (next) {
-	const user = this;
+organizationSchema.pre('save', async function (next) {
+	const org = this;
 	
-	if (user.isModified('password') || user.isNew) {
-		user.password = await hashPassword(user.password);
-		user.passwordChangedAt = Date.now() - 1000;
+	if (org.isModified('password') || org.isNew) {
+		org.password = await hashPassword(org.password);
+		org.passwordChangedAt = Date.now() - 1000;
 	}
 	next();
 });
 
 // ==============================================
 
-const User = new mongoose.model('User', userSchema)
-module.exports = User;
+const Organization = mongoose.model('Organization', organizationSchema)
+module.exports = Organization;

@@ -40,10 +40,10 @@ exports.getAllReviews = async function(req, res) {
 		const reviews = await Review.find({tour:tourId});
 
 		if (!reviews) {
-			return res.status(404).send();
+			return res.status(404).send({status:"fail", data:null});
 		}
 
-		res.status(200).send({reviews});
+		res.status(200).send({status:"success",data:reviews});
 	} catch (err) {
 		res.status(400).send(err);
 	}

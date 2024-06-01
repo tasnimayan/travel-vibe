@@ -17,12 +17,8 @@ const app = express();
 // Import routers
 const userRouter = require('./src/routes/userRouter')
 const tourRouter = require('./src/routes/tourRouter');
-// const userRouter = require('./routes/user-routes');
-// const reviewRouter = require('./routes/review-routes');
-// const viewRouter = require('./routes/view-routes');
-// const bookingRouter = require('./routes/booking-routes');
-
-// Render pug template
+const categoryRouter = require('./src/routes/categoryRoute');
+const Organization = require('./src/models/organization');
 
 
 //    =========    MIDDLEWARE     ========
@@ -65,23 +61,23 @@ if (process.env.NODE_ENV === 'development') {
 // ========   Database Connection   ========
 mongoose
   .connect(process.env.DATABASE, {autoIndex:false})
-  .then(() => console.log('MONGODB LOCAL connection successful'))
+  .then(() => console.log('MONGODB connection successful'))
   .catch(err => console.log(err));
 
 mongoose.connection.on('disconnected', () => {
 	console.log("======= Database Disconnected ======");
 });
 
+
 //*     ~~~~~     ROUTE HANDLERS     ~~~~~
 app.get('/api', (req, res)=>{
 	res.status(200).send({message:"API is currently running"})
 })
 
-app.use('/api/users', userRouter);
-app.use('/api/tours', tourRouter);
-// app.use('/api/reviews', reviewRouter);
-// app.use('/api/bookings', bookingRouter);
-// app.use('/', viewRouter);
+app.use('/api/v1/users', userRouter);
+app.use('/api/v1/tours', tourRouter);
+app.use('/api/v1/category', categoryRouter);
+
 
 //! requests that pass the route handlers --> not caught
 
@@ -94,7 +90,7 @@ app.all('*', (req, res, next) => {
 //* GLOBAL ERROR MIDDLEWARE
 app.use((err, req, res, next) => {
 	err.statusCode = err.statusCode || 500;
-	res.status(err.statusCode).send({ message: err.message });
+	res.status(err.statusCode).send({ message: err });
 });
 
 module.exports = app;
