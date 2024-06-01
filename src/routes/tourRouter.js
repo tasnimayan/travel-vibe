@@ -6,7 +6,7 @@ const upload = require('../helpers/multer')
 const {isAuthorized, isAvailableFor} = require('../middlewares/auth')
 const { getPopularLocations, increaseLocationCount} = require('../controllers/tour/popularLocationController')
 
-
+const {getTopDestination, increaseDestinationWeight} = require('../controllers/tour/topDestinationController')
 
 
 router.route('/tour/:tourId')
@@ -44,7 +44,6 @@ router.route("/search")
   .get(SearchTour)
 
 // router.get("/featured")
-// router.get("/offers")
 router.get("/discount", getDiscountedTours)
 router.get("/top-location", getPopularLocations)
 router.patch("/top-location/:locationId", increaseLocationCount)  //remove locationId and update depending on the location name
@@ -53,6 +52,8 @@ router.get("/offers", getOffers)
 // router.get("/places")
 // router.get("/category")
 // router.get("/query")
+router.get('/top-destination', getTopDestination)
+
 
 
 
