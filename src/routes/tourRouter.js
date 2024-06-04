@@ -1,6 +1,6 @@
 const express = require('express')
 const router = express.Router()
-const { getAllTours, createTour, topFiveTours, longestFiveTours, getQueriedTours, getTourDetails, updateTour, deleteTour, SearchTour, getDiscountedTours, getNearbyLocation, getOffers} = require('../controllers/tour/tourController')
+const { getAllTours, createTour, getTopRatedTours, getTourDetails, updateTour, deleteTour, SearchTour, getDiscountedTours, getNearbyLocation, getOffers} = require('../controllers/tour/tourController')
 const {createReview, getAllReviews, updateReview, deleteReview} = require('../controllers/tour/reviewController')
 const upload = require('../helpers/multer')
 const {isAuthorized, isAvailableFor} = require('../middlewares/auth')
@@ -13,13 +13,6 @@ router.route('/tour/:tourId')
   .get(getTourDetails)
   .post(isAuthorized, isAvailableFor('org'), upload.array('photos', 20), updateTour) //Need improvement
   .patch(isAuthorized, isAvailableFor('org'), deleteTour)
-
-
-// popular
-router.route('/top-5-tours').post(topFiveTours, getQueriedTours);
-router.route('/longest-5-tours').post(longestFiveTours, getQueriedTours);
-
-
 
 
 // Tour Review Routes 
@@ -49,10 +42,11 @@ router.get("/top-location", getPopularLocations)
 router.patch("/top-location/:locationId", increaseLocationCount)  //remove locationId and update depending on the location name
 router.get("/nearby-location", getNearbyLocation)
 router.get("/offers", getOffers)
-// router.get("/places")
-// router.get("/category")
-// router.get("/query")
+
+
 router.get('/top-destination', getTopDestination)
+// popular
+router.get('/top-rated',getTopRatedTours);
 
 
 

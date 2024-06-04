@@ -18,7 +18,7 @@ const app = express();
 const userRouter = require('./src/routes/userRouter')
 const tourRouter = require('./src/routes/tourRouter');
 const categoryRouter = require('./src/routes/categoryRoute');
-const Organization = require('./src/models/organization');
+const guideRouter = require('./src/routes/guideRouter')
 
 
 //    =========    MIDDLEWARE     ========
@@ -77,6 +77,7 @@ app.get('/api', (req, res)=>{
 app.use('/api/v1/users', userRouter);
 app.use('/api/v1/tours', tourRouter);
 app.use('/api/v1/category', categoryRouter);
+app.use('/api/v1/guides', guideRouter);
 
 
 //! requests that pass the route handlers --> not caught

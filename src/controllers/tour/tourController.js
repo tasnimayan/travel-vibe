@@ -1,25 +1,10 @@
 
-const Organization = require('../../models/organization.js');
 const Tour = require('../../models/tour.js');
 const User = require('../../models/user.js');
 const Nearby = require('../../models/nearby.js')
 const Offer = require('../../models/offer.js')
 const mongoose = require('mongoose')
 
-
-exports.topFiveTours = async (req, res, next) =>{
-  req.query.limit = '5';
-  req.query.sort = '-ratingsAverage_price';
-  req.query.fields = 'name_price_ratingsAverage_duration';
-  next();
-}
-
-exports.longestFiveTours = async (req, res, next) =>{
-  req.query.limit = '5';
-  req.query.sort = '-duration';
-  req.query.fields = 'name_price_ratingsAverage_duration';
-  next();
-}
 
 // Creating New tour
 exports.createTour = async (req, res) => {
@@ -112,39 +97,15 @@ exports.tourBookings = async (req, res) => {
   }
 }
 
-exports.getQueriedTours = async (req, res) => {
-  const queryString = { ...req.query };
-
-  // exclude everything other than match field -> later chain methods on found document
-  ['page', 'sort', 'limit', 'fields', 'skip'].forEach(
-    el => delete queryString[el]
-  );
-
-  //regEx filtering with >, =>, <, =<
-  let match = JSON.stringify(queryString);
-  match = match.replace(/\b(gt|gte|lt|lte)\b/g, match => `$${match}`);
-
+exports.getTopRatedTours = async (req, res) => {
   try{
     //get the matched documents from db
-    let QUERIES = Tour.find(JSON.parse(match));
+    let data = await Tour.find().limit(3).sort({ratingsAverage:-1});
 
-    // Chain  methods
-    const sort = req.query.sort || {};
-
-    //* PAGINATION
-
-    const PAGE_SIZE = 5;
-    const page = req.query.page || 1;
-    const limit = req.query.limit || PAGE_SIZE;
-    const skip = (page - 1) * PAGE_SIZE || 0;
-
-    //resolve the promise and finish query
-    const result = await QUERIES.skip(skip).limit(limit).sort(sort);
-
-    if (result.length === 0) {
-      return res.status(200).send({ message: 'No results match this query' });
+    if (data.length === 0) {
+      return res.status(404).send({ message: 'No results match this query' });
     }
-    res.status(200).send({ results: QUERIES.length, result });
+    res.status(200).send({ data });
 
   } catch (err) {
     res.status(400).send(err.message);
@@ -158,7 +119,7 @@ exports.getAllTours = async (req, res)=> {
     const PAGE_SIZE = 5;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || PAGE_SIZE;
-    const skip = (page - 1) * limit || 0;
+    const skip = (page - 1) * limit;
 
     let currentDate = new Date();
     //get the matched documents from db
@@ -216,7 +177,7 @@ exports.SearchTour = async (req, res) => {
   const PAGE_SIZE = 6;
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || PAGE_SIZE;
-  const skip = (page - 1) * limit || 0;
+  const skip = (page - 1) * limit
   
   try{
     let searchDate = req.query.startDate? new Date(req.query.startDate.toString()) : new Date();
@@ -288,7 +249,7 @@ exports.getDiscountedTours = async (req, res)=> {
     const PAGE_SIZE = 6;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || PAGE_SIZE;
-    const skip = (page - 1) * limit || 0;
+    const skip = (page - 1) * limit
 
     let currentDate = new Date();
     //get the matched documents from db
@@ -351,7 +312,7 @@ exports.getNearbyLocation = async (req, res) =>{
     const PAGE_SIZE = 6;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || PAGE_SIZE;
-    const skip = (page - 1) * limit || 0;
+    const skip = (page - 1) * limit
 
     let country = req.query.country ?? 'bangladesh';
     let location = req.query.location ?? '';

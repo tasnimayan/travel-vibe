@@ -4,11 +4,8 @@ const { isEmail } = require('validator');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto')
 
-
-// User password update does not triggers pre method
-
 // Creating User Schema
-const userSchema = new mongoose.Schema(
+const guideSchema = new mongoose.Schema(
 	{
 		name: {
 			type: String,
@@ -43,10 +40,12 @@ const userSchema = new mongoose.Schema(
 			},
 		},
 
+		bio:{type:String},
 		address:{
 			country: {type:String},
 			city:{type:String},
-			add:{
+			zip:{type:String},
+			addressLine:{
 				type: String,
 				trim: true,
 				minLength: 2,
@@ -59,40 +58,21 @@ const userSchema = new mongoose.Schema(
 			type: String,
 			default: 'default.jpg',
 		},
-
-		userReviews: [
-			{
-				type: mongoose.Schema.Types.ObjectId,
-				ref: 'Review',
-			},
-		],
-
-		userTours: [
-			{
-				type: mongoose.Schema.Types.ObjectId,
-				ref: 'Tour',
-			},
-		],
-
-		token: {
-			type: String,
-		},
-
-		role: {
-			type: String,
-			default: 'user',
-		},
-
-		active: {
+		locations:[{type:String}],
+		nid:{type:String},
+		phone:{type:String},
+		language:[{type:String}],
+		locations:[{type:String}],
+		education:{type:String},
+		isAvailable:{type:String},
+		isActive: {
 			type: Boolean,
 			default: true,
 		},
 		otp:{type: String},
+		servedCount:{type: Number},
+		rating:{type: Number},
 		isVerified:{type: Boolean, default:false},
-	
-		passwordChangedAt: Date,
-		resetPasswordToken: String,
-		resetPasswordExpires: Date,
 	},
 
 	{ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true }  }
@@ -101,20 +81,14 @@ const userSchema = new mongoose.Schema(
 
 
 // Method to hide unnecessary fields to 'user' role 
-userSchema.methods.toJSON = function () {
+guideSchema.methods.toJSON = function () {
 	const user = this.toObject();
 
 	if (user.role === 'user' || user.role === 'org') {
 		delete user.password;
-		delete user.passwordChangedAt;
-		delete user.resetPasswordToken;
-		delete user.resetPasswordExpires;
 		delete user.createdAt;
 		delete user.updatedAt;
 		delete user.active;
-		delete user.token;
-		delete user.userReviews;
-		delete user.userTours;
 		delete user.__v;
 		delete user.id;
 	}
@@ -124,50 +98,50 @@ userSchema.methods.toJSON = function () {
 
 
 // Static methods that can be called on Model instead of instance of model
-userSchema.statics.loginUser = async (email, password) => {
+guideSchema.statics.loginUser = async (email, password) => {
 
-	const user = await User.findOne({ email });
+	const guide = await Guide.findOne({ email });
 
-	if (!user || user.active === false) {
+	if (!guide || guide.active === false) {
 		throw new Error('Account is not active');
 	}
 
-	const match = await user.comparePassword(password, user.password);
+	const match = await guide.comparePassword(password, guide.password);
 
 	if (!match) {
 		throw new Error("Password does not match");
 	}
 
-	return user;
+	return guide;
 };
 
 // Static method to validate Authentication Token
-userSchema.statics.validateToken = async function (token) {
+guideSchema.statics.validateToken = async function (token) {
 	const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-	const user = await User.findOne({ _id: decoded._id });
-	if (!user) {
+	const guide = await Guide.findOne({ _id: decoded._id });
+	if (!guide) {
 		throw new Error("Invalid token");
 	}
 
-	return user.toJSON();
+	return guide.toJSON();
 };
 
 // Custom method to generate token for authentication when user logs in or create account
-userSchema.methods.generateToken = async function () {
-	const user = this;
+guideSchema.methods.generateToken = async function () {
+	const guide = this;
 
-	const token = jwt.sign({ _id: user._id.toString() }, process.env.JWT_SECRET, {
+	const token = jwt.sign({ _id: guide._id.toString() }, process.env.JWT_SECRET, {
 		expiresIn: process.env.JWT_EXPIRES,
 	});
 
-	user.token = token;
-	await user.save();
+	guide.token = token;
+	await guide.save();
 
 	return token;
 };
 
-userSchema.methods.createPasswordResetToken = async function () {
+guideSchema.methods.createPasswordResetToken = async function () {
 	const resetToken = crypto.randomBytes(32).toString('hex');
 
 	//hashing the reset token
@@ -181,13 +155,13 @@ userSchema.methods.createPasswordResetToken = async function () {
 };
 
 // // Comparing password with hashed one
-// userSchema.methods.comparePassword = async function (plainPw, userPw) {
+// guideSchema.methods.comparePassword = async function (plainPw, userPw) {
 // 	return await bcrypt.compare(plainPw, userPw);
 // };
 
 
 // //* pre-save HASH hook --> works on create-save-update
-// userSchema.pre('save', async function (next) {
+// guideSchema.pre('save', async function (next) {
 // 	const user = this;
 
 // 	if (user.isModified('password') || user.isNew) {
@@ -200,7 +174,7 @@ userSchema.methods.createPasswordResetToken = async function () {
 // =================== This code block is to replace bcrypt that does not supported in shared hosting
 // Comparing password with hashed one
 
-userSchema.methods.comparePassword = async function (plainPw, userPw) {
+guideSchema.methods.comparePassword = async function (plainPw, userPw) {
 	if (hashPassword(plainPw) === userPw) {
 		return true;
 	}
@@ -212,17 +186,17 @@ const hashPassword = password => {
 	return crypto.createHash('sha256').update(password).digest('hex')
 }
 //* pre-save HASH hook --> works on create-save-update
-userSchema.pre('save', async function (next) {
-	const user = this;
+guideSchema.pre('save', async function (next) {
+	const guide = this;
 	
-	if (user.isModified('password') || user.isNew) {
-		user.password = await hashPassword(user.password);
-		user.passwordChangedAt = Date.now() - 1000;
+	if (guide.isModified('password') || guide.isNew) {
+		guide.password = await hashPassword(guide.password);
+		guide.passwordChangedAt = Date.now() - 1000;
 	}
 	next();
 });
 
 // ==============================================
 
-const User = new mongoose.model('User', userSchema)
-module.exports = User;
+const Guide = new mongoose.model('Guides', guideSchema)
+module.exports = Guide;

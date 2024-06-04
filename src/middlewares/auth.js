@@ -8,7 +8,7 @@ module.exports.isAuthorized =	async (req, res, next) => {
     
     const token = req.headers.authorization.split(' ')[1];
 
-    // const token = req.cookies.jwt;
+    // const token = req.cookies.tvUserToken;
     const user = await User.validateToken(token);
 
     if (!token || !user) {

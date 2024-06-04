@@ -1,8 +1,7 @@
 const User = require('../../models/user')
-const mailSender = require('../../utils/email')
-const path = require('path')
 const crypto = require('crypto')
 const mongoose = require('mongoose')
+const EmailSend = require('../../utils/mailSender')
 
 
 /*
@@ -24,6 +23,25 @@ let cookieOptions = {
 	secure: true,
 };
 
+// complete
+const userOTPService = async (email) => {
+  try {
+    let code = Math.floor(100000 + Math.random() * 900000);
+    let emailText = `<h3>Please confirm your sign-up request</h3> </br></br>
+    To verify your account, please use the following code to enable your new device — it will expire in 30 minutes: </br> <h3>${code} </h3>`;
+    let emailSubject = "Verification | Travel Vibe";
+    await EmailSend(email, emailText, emailSubject);
+    
+    await User.updateOne(
+      { email: email },
+      { $set: { otp: code } }
+    );
+    return { status: "success", message: "6 digit OTP has been sent to your email" };
+  } catch (err) {
+    return { status: "failed", message: err.message };
+  }
+};
+
 
 // ========== SignUp Functionalities ===========
 exports.signUp = async (req, res)=> {
@@ -41,11 +59,10 @@ exports.signUp = async (req, res)=> {
     res.cookie('tvUserToken', token, cookieOptions);
 
     // Send a welcome email to a new user
-    // mailSender(user, "welcome");
+    let response = await userOTPService(user.email)
 
-    res
-      .status(201)
-      .send({ message: 'User created successfully!', user, token });
+    res.status(201)
+      .send({ message: '6 digit OTP has been sent to your email', user, token });
   }
   catch (err) {
     console.log(err)
@@ -265,5 +282,27 @@ exports.getUserProfile = async (req, res) =>{
     res.status(200).send({data:user});
   } catch (err) {
     res.status(400).send({ error: err.message });
+  }
+}
+
+// OTP verification complete
+exports.VerifyOTP = async (req, res) =>{
+  
+  try{
+    let email = req.user?.email
+    let otp = req.params.otp
+    
+    if(!email){
+      return res.status(401).send({ status: "fail", message: "Unauthorized access"});
+    }
+
+    let  user = await User.findOneAndUpdate({email:email , otp:otp}, {$set:{otp:"NaN", isVerified:true}})
+    if(!user){
+      return res.status(401).send({ status: "fail", message: "Unauthorized access"});
+    }
+    res.status(200).send({ status: "success", message: "Verification Successful!"});
+  }
+    catch (err) {
+    return res.status(404).send({ status: "fail", message: err.message });
   }
 }
