@@ -1,7 +1,7 @@
 <a name="readme-top"></a>
 
 <div align="center">
-  <h1 align="center">Travel Mate - Backend API</h1>
+  <h1 align="center">Travel Vibe - Backend API</h1>
   <p align="center">
     <a href="https://github.com/tasnimayan">View Demo</a>
     ·
@@ -13,7 +13,7 @@
 
 ## Overview
 
-The **Travel Mate** backend API is a robust server-side application built using **Node.js**, **TypeScript**, and **MongoDB** to power a seamless travel experience. This API provides essential features for travel planning, tour organization, local guide and hotel management, and tourism promotion in Bangladesh.
+The **Travel Vibe** backend API is a robust server-side application built using **Node.js**, **TypeScript**, and **MongoDB** to power a seamless travel experience. This API provides essential features for travel planning, tour organization, local guide and hotel management, and tourism promotion in Bangladesh.
 
 ## Features
 
