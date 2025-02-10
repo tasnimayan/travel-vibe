@@ -1,10 +1,10 @@
-const TopDestination = require('../../models/topDestination')
+const Destination = require('../../models/destination')
 
 // Get Top location based on search (complete)
-exports.getTopDestination = async function(req, res) {
+exports.getDestination = async function(req, res) {
 	try {
 			// Get all locations from database 
-		const destinations = await TopDestination.getDestinations();
+		const destinations = await Destination.getDestinations();
 
 		if (!destinations) {
 			return res.status(404).send({message:"No category found"});
@@ -20,7 +20,7 @@ exports.getTopDestination = async function(req, res) {
 exports.increaseDestinationWeight = async function(req, res) {
 	try {
 		// increase locations count on database
-		const destinations = await TopDestination.increaseWeight(req.params.destinationId)
+		const destinations = await Destination.increaseWeight(req.params.destinationId)
 
 		if (!destinations) {
 			return res.status(404).send({message:"Could not updated count!"});

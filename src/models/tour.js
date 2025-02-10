@@ -4,48 +4,55 @@ const Organization = require('./organization')
 
 const tourSchema = mongoose.Schema(
   {
-    orgId:{
+    // _id - will be auto generated
+    title: { type: String, trim: true, required: true },
+    description: { type: String, trim: true },
+    price: { type: Number, required: true, min: 0 },
+    bookingDeposit: { type: Number, min: 0 }, 
+    discountPercentage: { type: Number, default: 0, min: 0, max: 100 },
+    discountAmount: { type: Number, default: 0, min: 0 },
+    currency: { type: String, enum: ['USD', 'EUR', 'INR', 'GBP'], default: 'USD' },
+    startDate: { type: Date },
+    endDate: { type: Date },
+    duration: { type: String }, 
+    images: [String],
+    startingLocation: { type: String },
+    highlightedPlaces: [{ type: String }],
+    maxGroupSize: { type: Number, min: 1},
+    pickupPoint: [ String ],
+    departureTime: { type: Date },
+    rating: { type:Number, min:1, max:5, set: val => ((val * 10) / 10).toFixed(2) },
+    packages: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Organization',
-      required:true,
-		},
+      ref: 'Package',
+    },
+    amenities: [{ type: String }], 
+    itinerary:[{
+      title: { type: String, required: true },
+      activities: [{
+        title: { type: String, required: true },
+        description: { type: String, required: true }
+      }]
+    }],
+    country: { type:String },
+    tags: [{ type: String }],
+    status: { type: String, enum: ['upcoming', 'ongoing', 'completed'], default: 'ongoing' },
+    isActive: { type: Boolean, default:true },
+    
+    policy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Policy'
+    },
     category:{
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Category',
       required:true,
 		},
-    title: {type:String, trim:true, required:true},
-    startLocation:{type:String, required:true},
-    destination:{type:String},
-    duration:{type:String},
-    description:{type:String, trim:true},
-    packages:[
-      {
-        name: String,
-        description: String,
-        price: Number
-      }
-    ],
-    personCapacity: {type:Number},
-    itinerary:[
-      {
-        day: Number,
-        activity: String,
-        description: String
-      }
-    ],
-    images:[String],
-    price:{type:Number, required:true, min:0},
-    bookingMoney:{type:Number},
-    ratingsAverage:{type:Number, min:1, max:5, set: val => ((val * 10) / 10).toFixed(2)},
-    ratingsQuantity: {type:Number, default:0},
-    startDate:{type:Date},
-    startTime:{type:Date},
-    policy:{type:String},
-    react:[],
-    comments:[],
-    country:{type:String},
-    discountRate: {type:Number, default:0}
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Organization',
+      required: true
+    },
   },
   {
     timestamps:true,
@@ -54,7 +61,18 @@ const tourSchema = mongoose.Schema(
   }
 )
 
-tourSchema.index({ startDate: 1, destination: 1 });
+tourSchema.index({ startDate: 1, country: 1, category: 1 });
+
+// Calculate finalPrice before providing the data to user
+tourSchema.virtual('finalPrice').get(function () {
+  if(discountAmount > 0 ) return this.price - this.discountAmount;
+  if(discountPercentage > 0 ) return Math.round((this.price * (1 - (discountPercentage / 10000))) * 100) / 100;
+  return this.price
+});
+
+tourSchema.methods.isDiscounted = ()=> {
+  return this.discountPercentage > 0;
+};
 
 tourSchema.virtual('reviews', {
 	ref: 'Review',
@@ -67,14 +85,6 @@ tourSchema.virtual('bookings', {
 	localField: '_id',
 	foreignField: 'tour',
 });
-
-tourSchema.virtual('finalPrice').get(()=> {
-  return this.price - (this.discountRate || 0);
-});
-
-tourSchema.methods.isDiscounted = ()=> {
-  return this.discountRate > 0;
-};
 
 
 tourSchema.methods.toJSON = function () {

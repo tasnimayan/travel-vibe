@@ -1,4 +1,4 @@
-const Category = require('../../models/category');
+const Category = require('../../models/tourCategory');
 const mongoose = require('mongoose')
 
 // Create New category (complete)
