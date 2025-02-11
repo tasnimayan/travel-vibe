@@ -1,5 +1,6 @@
-const mongoose = require('mongoose');
-const Organization = require('./organization')
+// updated:
+import mongoose from 'mongoose'
+import Organization from './organization'
 
 
 const tourSchema = mongoose.Schema(
@@ -22,6 +23,7 @@ const tourSchema = mongoose.Schema(
     pickupPoint: [ String ],
     departureTime: { type: Date },
     rating: { type:Number, min:1, max:5, set: val => ((val * 10) / 10).toFixed(2) },
+    ratingQuantity: { type: Number },
     packages: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Package',

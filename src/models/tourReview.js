@@ -1,35 +1,56 @@
-const mongoose = require('mongoose');
-const Tour = require('../models/tour');
+// updated:
+import mongoose from 'mongoose';
+import Tour from './tour';
 
 const reviewSchema = new mongoose.Schema(
 	{
 		review: {
 			type: String,
 			required: true,
-			min: 1,
-			max: 250,
+			trim: true,
+			minLength: [1, 'Review can not be empty'],
+			maxLength: [1000, 'Review cannot exceed 1000 characters']
 		},
-
 		rating: {
 			type: Number,
 			required:true,
 			min: 1,
 			max: 5,
 		},
-
+		photos: [{
+			id: String,
+			url: String,
+		}],
+		isVerifiedBooking: {
+			type: Boolean,
+			default: false
+		},
+		status: {
+			type: String,
+			enum: ['pending', 'approved', 'rejected', 'reported'],
+			default: 'approved'
+		},
 		tour: {
 			type: mongoose.Schema.Types.ObjectId,
 			ref: 'Tour',
 			required: true,
 		},
-
 		user: {
 			type: mongoose.Schema.Types.ObjectId,
 			ref: 'User',
 			required: true,
 		},
+		response: {
+			content: String,
+			respondedBy: {
+					type: mongoose.Schema.Types.ObjectId,
+					ref: 'Organization',
+					required: true,
+			},
+			respondedAt: Date
+		}
 	},
-	{ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
+	{ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true }, versionKey: false }
 );
 
 
@@ -38,8 +59,6 @@ reviewSchema.index({ tour: 1, user: 1 }, { unique: true, sparse: true });
 
 reviewSchema.methods.toJSON = function () {
 	const review = this.toObject();
-
-	delete review.__v;
 	delete review.id;
 
 	return review;
@@ -48,9 +67,13 @@ reviewSchema.methods.toJSON = function () {
 //* static method on Model to calculate & Update the average rating of a tour
 reviewSchema.statics.calcAverageRating = async (tourId) => {
 	// this  = Tour model
-	const stats = await Review.aggregate([
+	const stats = await TourReview.aggregate([
 		{
-			$match: { tour: tourId },
+			$match: { 
+				tour: tourId,
+				status: 'approved'
+			},
+			
 		},
 		{
 			$group: {
@@ -62,8 +85,8 @@ reviewSchema.statics.calcAverageRating = async (tourId) => {
 	]);
 
 	await Tour.findByIdAndUpdate(tourId, {
-		ratingsQuantity: stats[0].numOfRatings,
-		ratingsAverage: stats[0].avgRating,
+		ratingQuantity: stats[0].numOfRatings,
+		rating: stats[0].avgRating,
 	});
 };
 
@@ -82,5 +105,5 @@ reviewSchema.post('save', function () {
 	this.constructor.calcAverageRating(this.tour);
 });
 
-const Review = mongoose.model('reviews', reviewSchema);
-module.exports = Review;
+const TourReview = mongoose.model('TourReview', reviewSchema, 'tour_reviews');
+module.exports = TourReview;

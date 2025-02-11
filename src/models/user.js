@@ -17,7 +17,6 @@ const userSchema = new mongoose.Schema(
 			minLength: 2,
 			maxLength: 99,
 		},
-
 		email: {
 			type: String,
 			trim: true,
@@ -30,7 +29,6 @@ const userSchema = new mongoose.Schema(
 				}
 			},
 		},
-
 		password: {
 			type: String,
 			trim: true,
@@ -42,7 +40,6 @@ const userSchema = new mongoose.Schema(
 				}
 			},
 		},
-
 		address:{
 			country: {type:String},
 			city:{type:String},
@@ -54,35 +51,29 @@ const userSchema = new mongoose.Schema(
 			}
 
 		},
-
 		photo: {
 			type: String,
 			default: 'default.jpg',
 		},
-
 		userReviews: [
 			{
 				type: mongoose.Schema.Types.ObjectId,
 				ref: 'Review',
 			},
 		],
-
 		userTours: [
 			{
 				type: mongoose.Schema.Types.ObjectId,
 				ref: 'Tour',
 			},
 		],
-
 		token: {
 			type: String,
 		},
-
 		role: {
 			type: String,
 			default: 'user',
 		},
-
 		active: {
 			type: Boolean,
 			default: true,

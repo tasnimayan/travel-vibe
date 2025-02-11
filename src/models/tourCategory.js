@@ -1,4 +1,4 @@
-
+// updated:
 import mongoose from 'mongoose'
 import { isURL } from 'validator';
 
@@ -9,9 +9,9 @@ const tourCategorySchema = new mongoose.Schema({
 	{ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
 
-categorySchema.index({name:1})
+tourCategorySchema.index({name:1})
 
-categorySchema.methods.toJSON = function () {
+tourCategorySchema.methods.toJSON = function () {
 	const category = this.toObject();
 	delete category.__v;
 	delete category.createdAt;
@@ -19,5 +19,5 @@ categorySchema.methods.toJSON = function () {
 	return category;
 };
 
-const TourCategory = mongoose.model('tour-category', tourCategorySchema);
+const TourCategory = mongoose.model('TourCategory', tourCategorySchema, 'tour_categories');
 module.exports = TourCategory;

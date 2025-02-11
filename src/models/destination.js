@@ -1,4 +1,6 @@
-const mongoose = require('mongoose')
+// updated:
+import mongoose from 'mongoose'
+
 
 const destinationSchema = new mongoose.Schema(
   {
