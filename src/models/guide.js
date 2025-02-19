@@ -62,7 +62,6 @@ const guideSchema = new mongoose.Schema(
 		nid:{type:String},
 		phone:{type:String},
 		language:[{type:String}],
-		locations:[{type:String}],
 		education:{type:String},
 		isAvailable:{type:String},
 		isActive: {
