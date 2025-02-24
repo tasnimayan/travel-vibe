@@ -1,5 +1,4 @@
 const mongoose = require('mongoose');
-const { isEmail } = require('validator');
 const { Schema } = mongoose;
 const { hashPassword, comparePassword } = require('./src/utils/auth');
 
@@ -8,6 +7,10 @@ const LOCK_TIME = 1 * 60 * 60 * 1000; // 1 hour in milliseconds
 
 
 const guideSchema = new Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+  },
   name: {
     type: String,
     required: true,
@@ -18,32 +21,6 @@ const guideSchema = new Schema({
   profileImage: {
     type: String,
     default: 'default-profile.jpg',
-  },
-  email: {
-    type: String,
-    required: true,
-    unique: true,
-    trim: true,
-    lowercase: true,
-    validate(value) {
-      if (!isEmail(value)) {
-        throw new Error('Invalid email format!');
-      }
-    },
-  },
-  password: {
-    type: String,
-    trim: true,
-    required: true,
-    minlength: 8,
-    validate(value) {
-      if (value.toLowerCase().includes('password')) {
-        throw new Error('Password cannot contain -password-');
-      }
-      if(value.toLowerCase() === '12345678') {
-        throw new Error('Password is very weak')
-      }
-    },
   },
   phone: {
     type: String,
@@ -115,22 +92,6 @@ const guideSchema = new Schema({
   isActive: { 
     type: Boolean, 
     default: false
-  },
-
-// Password and Security
-  passwordResetToken: String,
-  passwordResetExpires: Date,
-  lastPasswordChange: Date,
-  loginAttempts: {
-    type: Number,
-    default: 0
-  },
-  lockUntil: Date,
-  otp: {
-    type: String,
-  },
-  otpExpires: {
-    type: Date,
   },
   totalServedCount: {
     type: Number,

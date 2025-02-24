@@ -5,7 +5,7 @@ const upload = require('../helpers/multer')
 const {isAuthorized, isAvailableFor} = require('../middlewares/auth')
 
 
-// Route URL "api/v1/category/"
+// Route URL "api/v2/category/"
 router.route('/')
   .get(getAllCategory)
   .post(isAuthorized, isAvailableFor("admin"), upload.single('categoryImg'),createCategory);

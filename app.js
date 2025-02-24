@@ -1,15 +1,15 @@
-require('dotenv').config();
+import dotenv from 'dotenv';
+import path from 'path';
 
-const path = require('path');
-const express = require('express');
-const cors = require('cors');
-const rateLimit = require('express-rate-limit');
-const mongoSanitize = require('express-mongo-sanitize');
-const cookieParser = require('cookie-parser');
-const morgan = require('morgan');
-const mongoose = require('mongoose')
+dotenv.config();
 
-
+import express from'express';
+import cors from'cors';
+import rateLimit from'express-rate-limit';
+import mongoSanitize from'express-mongo-sanitize';
+import cookieParser from'cookie-parser';
+import morgan from'morgan';
+import mongoose from'mongoose';
 
 // Express App
 const app = express();
@@ -76,7 +76,7 @@ app.get('/api', (req, res)=>{
 
 app.use('/api/v1/users', userRouter);
 app.use('/api/v1/tours', tourRouter);
-app.use('/api/v1/category', categoryRouter);
+app.use('/api/v2/category', categoryRouter);
 app.use('/api/v1/guides', guideRouter);
 
 
