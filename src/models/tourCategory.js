@@ -1,6 +1,5 @@
 // updated:
-import mongoose from 'mongoose'
-import { isURL } from 'validator';
+const mongoose = require('mongoose')
 
 const tourCategorySchema = new mongoose.Schema({
 		name: { 
@@ -24,10 +23,6 @@ const tourCategorySchema = new mongoose.Schema({
 		imagePath: { 
 			type: String, 
 			required: [true, 'Category image is required'],
-			validate: { 
-				validator: isURL, 
-				message: 'Invalid URL format for image path'
-			},
 		},
 		isActive: {
 				type: Boolean,
@@ -38,7 +33,6 @@ const tourCategorySchema = new mongoose.Schema({
 );
 
 tourCategorySchema.index({ name: 1, slug: 1 });
-tourCategorySchema.index({ parentCategory: 1 });
 
 tourCategorySchema.methods.toJSON = function () {
 	const category = this.toObject();
@@ -54,5 +48,5 @@ tourCategorySchema.pre('save', function(next) {
 	next();
 });
 
-const TourCategory = mongoose.model('TourCategory', tourCategorySchema, 'tour_categories');
+const TourCategory = mongoose.model('TourCategory', tourCategorySchema, 'tour-categories');
 module.exports = TourCategory;

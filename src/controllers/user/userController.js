@@ -1,8 +1,9 @@
 const User = require('../../models/user')
 const crypto = require('crypto')
 const mongoose = require('mongoose')
-const EmailSend = require('../../utils/mailSender')
-
+const UserProfile = require('../../models/userProfile')
+const { sendOtpEmail } = require('../../services/auth/otpService')
+const { cookieOptions } = require('../../utils')
 
 /*
 1. User can create account         -Done
@@ -11,100 +12,172 @@ const EmailSend = require('../../utils/mailSender')
 4. User can reset password         -Done
 5. User can recover their account  -Done
 6. User can delete their account   -Done
-
 */
 
 // In the signUp function  => Add the email sending function when domain is purchased
 
-let cookieOptions = {
-	expires: new Date(
-		Date.now() + process.env.JWT_COOKIE_EXPIRES_IN * 24 * 60 * 60_000
-	),
-	secure: true,
-};
-
-// complete
-const userOTPService = async (email) => {
+// ========== SignUp Functionalities (v2)===========
+exports.signUp = async (req, res) => {
   try {
-    let code = Math.floor(100000 + Math.random() * 900000);
-    let emailText = `<h3>Please confirm your sign-up request</h3> </br></br>
-    To verify your account, please use the following code to enable your new device — it will expire in 30 minutes: </br> <h3>${code} </h3>`;
-    let emailSubject = "Verification | Travel Vibe";
-    await EmailSend(email, emailText, emailSubject);
+    const { email, password, name, location } = req.body;
     
-    await User.updateOne(
-      { email: email },
-      { $set: { otp: code } }
-    );
-    return { status: "success", message: "6 digit OTP has been sent to your email" };
-  } catch (err) {
-    return { status: "failed", message: err.message };
-  }
-};
-
-
-// ========== SignUp Functionalities ===========
-exports.signUp = async (req, res)=> {
-  try {
-    // Create and save user to DB
-    const userData = { ...req.body };
+    if (!email || !password) {
+      return res.status(400).send({
+        status: 'fail',
+        message: 'Please provide email and password'
+      });
+    }
+    
+    const userData = {
+      email,
+      password,
+      role: 'user', // Default role for travelers
+    };
+    
     const user = await User.create(userData);
 
     if (!user) {
-      return res.status(400).send({message:"Couldn't create user"});
+      return res.status(400).send({status:"fail", message: "Couldn't create user account"});
     }
 
-    // Log user in and send jwt
-    const token = await user.generateToken(user._id);
-    res.cookie('tvUserToken', token, cookieOptions);
+    const profileData = {
+      user: user._id,
+      name,
+      location: {
+        country: location?.country || '',
+        city: location?.city || '',
+        address: location?.address || ''
+      },
+      isActive: true,
+      isVerified: false
+    };
 
-    // Send a welcome email to a new user
-    let response = await userOTPService(user.email)
+    const userProfile = await UserProfile.create(profileData);
 
-    res.status(201)
-      .send({ message: '6 digit OTP has been sent to your email', user, token });
+    if (!userProfile) {
+      // Rollback user creation if profile creation fails
+      await User.findByIdAndDelete(user._id);
+      return res.status(400).send({status:"fail", message: "Couldn't create user profile"});
+    }
+
+    // Send OTP verification email
+    await sendOtpEmail(user.email, );
+
+    res.status(201).send({ 
+      status:"success",
+      message: '6 digit OTP has been sent to your email',
+      data: {
+        user: {
+          _id: user._id,
+          email: user.email,
+          name: userProfile.name,
+          role: user.role
+        },
+      }
+    });
   }
   catch (err) {
-    console.log(err)
-    res.status(400).send({ error: err.message });
+    console.log(err);
+    res.status(400).send({ status:"fail", message: err.message });
   }
 }
 
-// ========== Login Functionalities ===========
+// ========== Login Functionalities (v2)===========
 exports.loginUser = async (req, res) =>{
-  const { email, password } = req.body;
-
   try {
-    const user = await User.loginUser(email, password);
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        status: 'fail',
+        message: 'Please provide email and password'
+      });
+    }
+
+    const user = await User.login(email, password);
 
     if (!user) {
       return res.status(401).send({message:"No user found"});
     }
-    const token = await user.generateToken();
-    res.cookie('tvUserToken', token, cookieOptions);
 
-    res.status(200).send({ message: 'Login successful', user, token });
+    const userProfile = await UserProfile.findOne({userId: user._id}).select('isActive isVerified')
+    
+    if(!userProfile.isVerified){
+      return res.status(400).json({
+        status: 'fail',
+        message: 'Please verify your email'
+      }); 
+    }
+
+    // Generate JWT token and set cookie
+    const token = await user.generateToken();
+    res.cookie('tv-token', token, cookieOptions);
+
+    res.status(200).send({status:"success", message: 'Login successful', data:{ user, token } });
   } catch (err) {
-    res.status(401).send(err);
+    res.status(401).json({
+      status: 'fail',
+      message: err.message || 'Authentication failed'
+    });
   }
 }
 
-// ========== Logout Functionalities ===========
+// ========== Logout Functionalities (v2)===========
 module.exports.logoutUser = async (req, res) => {
   try {
     // Create fake token to cookie
-    res.cookie('tvUserToken', 'nothing', {
+    res.cookie('tv-token', 'expired', {
       expires: new Date(Date.now() + 10_000),
-      httpOnly: true,
+      httpOnly: true, // Prevents access on client side
     });
 
     // api and db logout
     req.token = undefined;
     req.user.token = undefined;
 
-    res.status(200).send({ message: 'Logout successful!' });
+    res.status(200).send({ status:"success", message: 'Logout successful!' });
   } catch (err) {
-    res.status(400).send({ error: err.message });
+    res.status(400).send({ status:"fail", message: err.message });
+  }
+}
+
+// OTP verification complete (v2)
+exports.verifyOTP = async (req, res) =>{
+  try {
+    const { email, otp } = req.body
+    
+    if( !email ){
+      return res.status(401).send({ status: "fail", message: "Unauthorized access"});
+    }
+
+    const user = await User.findOneAndUpdate(
+      { email: email , otp: Number(otp), otpExpiresAt: { $gt: new Date() }},
+      { $set: { otp: null, isVerified: true}
+    }).select("email otp otpExpiresAt")
+
+    if(!user){
+      return res.status(401).send({ status: "fail", message: "The provided email and OTP do not match"});
+    }
+    res.status(200).send({ status: "success", message: "Verification Successful!"});
+  }
+    catch (err) {
+    return res.status(404).send({ status: "fail", message: err.message });
+  }
+}
+
+// Resend OTP verification code (v2)
+exports.resendOTP = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).send({ status: 'fail', message: 'Please provide email address' });
+    }
+    await sendOtpEmail(email)
+
+    res.status(200).send({ status: 'success', message: '6 digit OTP has been resent to your email' });
+  } catch (err) {
+    res.status(400).send({ status: 'fail', message: err.message });
   }
 }
 
@@ -285,24 +358,4 @@ exports.getUserProfile = async (req, res) =>{
   }
 }
 
-// OTP verification complete
-exports.VerifyOTP = async (req, res) =>{
-  
-  try{
-    let email = req.user?.email
-    let otp = req.params.otp
-    
-    if(!email){
-      return res.status(401).send({ status: "fail", message: "Unauthorized access"});
-    }
 
-    let  user = await User.findOneAndUpdate({email:email , otp:otp}, {$set:{otp:"NaN", isVerified:true}})
-    if(!user){
-      return res.status(401).send({ status: "fail", message: "Unauthorized access"});
-    }
-    res.status(200).send({ status: "success", message: "Verification Successful!"});
-  }
-    catch (err) {
-    return res.status(404).send({ status: "fail", message: err.message });
-  }
-}

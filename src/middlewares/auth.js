@@ -1,6 +1,5 @@
 const User = require('../models/user')
 
-
 module.exports.isAuthorized =	async (req, res, next) => {
   try {
     if (!req.headers.authorization && !req.headers.authorization?.startsWith('Bearer'))
@@ -32,29 +31,4 @@ module.exports.isAvailableFor  = (...roles) => {
     }
     next();
   };
-}
-
-	// only for rendered pages -> no errors
-module.exports.isLoggedIn = async (req, res, next) => {
-  // if (req.cookies.jwt) {
-    if(req.headers.authorization){
-    try {
-      // const token = req.cookies.jwt;
-      const token = req.headers.authorization.split(' ')[1];
-
-      const user = await User.validateToken(token);
-
-      if (!user || !token) {
-        return next();
-      }
-      // User is logged in (no errors)
-      // res.locals variables are available in PUG
-      res.locals.user = user;
-      
-      return next();
-    } catch (e) {
-      return next();
-    }
-  }
-  next();
 }
