@@ -13,6 +13,7 @@ router.post('/login', loginUser)
 router.post('/verify', verifyOTP)
 router.post('/otp/resend', resendOTP)
 
+// yet to work for v2
 router.get('/logout', isAuthorized, isAvailableFor('user', 'organization', 'admin'), logoutUser)
 router.get('/profile', isAuthorized, isAvailableFor('user', 'organization'), getUserProfile)  // User profile
 router.post('/profile/update', isAuthorized, isAvailableFor('user', 'organization'), upload.single('avatar'), updateUser)

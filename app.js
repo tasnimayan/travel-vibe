@@ -19,7 +19,8 @@ const userRouter = require('./src/routes/userRouter')
 const adminRouter = require('./src/routes/adminRouter');
 // const tourRouter = require('./src/routes/tourRouter');
 // const guideRouter = require('./src/routes/guideRouter')
-const categoryRouter = require('./src/routes/categoryRouter')
+const categoryRouter = require('./src/routes/categoryRouter');
+const { logger } = require('./src/utils/logger');
 
 //    =========    MIDDLEWARE     ========
 
@@ -76,8 +77,8 @@ app.get('/api', (req, res)=>{
 })
 
 app.use('/api/v2/users', userRouter);
-app.use('/api/v2/admin', adminRouter);
-app.use('/api/v2/category', categoryRouter);
+app.use('/api/v2/admin', adminRouter); //done
+app.use('/api/v2/category', categoryRouter); //done
 // app.use('/api/v2/tours', tourRouter);
 // app.use('/api/v2/guides', guideRouter);
 
@@ -91,8 +92,8 @@ app.all('*', (req, res, next) => {
 });
 
 //* GLOBAL ERROR MIDDLEWARE
-app.use((err, req, res, next) => {
-	console.log("=====>" + JSON.stringify(err) +"<======")
+app.use(async (err, req, res, next) => {
+	await logger(err, req)
 	err.statusCode = err.statusCode || 500;
 	res.status(err.statusCode).send({ message: err });
 });

@@ -1,6 +1,6 @@
 // updated:
-import mongoose from 'mongoose'
-import Organization from './organization'
+const mongoose = require('mongoose')
+const Organization = require('./organization')
 
 
 const tourSchema = mongoose.Schema(
@@ -47,7 +47,7 @@ const tourSchema = mongoose.Schema(
     },
     category:{
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Category',
+      ref: 'TourCategory',
       required:true,
 		},
     createdBy: {

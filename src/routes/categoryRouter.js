@@ -10,8 +10,8 @@ router.route('/')
   .post(isAuthorized, isAvailableFor("admin"), upload.single('categoryImg'),createTourCategory);
 
 router.route('/:categoryId')
-  .post(isAuthorized, isAvailableFor("org","admin"), updateCategory)  // not updating properly
-  .patch(isAuthorized, isAvailableFor("org","admin"), deleteCategory);
+  .post(isAuthorized, isAvailableFor("admin"), upload.single('categoryImg'), updateCategory)  // not updating properly
+  .patch(isAuthorized, isAvailableFor("admin"), deleteCategory);
   
 
 module.exports = router;
