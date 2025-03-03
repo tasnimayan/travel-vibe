@@ -30,15 +30,6 @@ const userProfileSchema = new mongoose.Schema(
       interests: [{ type: String }], 
       preferredLanguages: [{ type: String }], 
     },
-
-    // Bookings History
-    // bookings: {
-    //   tourBookings: [{ type: Schema.Types.ObjectId, ref: "TourBooking" }],
-    //   guideBookings: [{ type: Schema.Types.ObjectId, ref: "GuideBooking" }],
-    //   hotelBookings: [{ type: Schema.Types.ObjectId, ref: "HotelBooking" }],
-    // },
-
-    // Bookmarked posts (Tours, Hotels, Guides)
     favorites: [
 			{ type: mongoose.Schema.Types.ObjectId, ref: "Favorite" }
 		],

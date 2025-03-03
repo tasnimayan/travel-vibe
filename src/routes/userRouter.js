@@ -1,8 +1,10 @@
 const express = require('express')
 const upload = require('../helpers/multer')
 
-const {signUp, loginUser, logoutUser, updateUser, getUser, updatePassword, deleteUser, forgotPassword, resetPassword, getUserProfile, verifyOTP, resendOTP} = require('../controllers/user/userController');
-const {isAuthorized, isAvailableFor} = require('../middlewares/auth')
+const {signUp, loginUser, logoutUser, updateUser, getUser, deleteUser, getUserProfile} = require('../controllers/user/userController');
+const {isAuthorized, isAvailableFor} = require('../middlewares/auth');
+const { verifyOTP, resendOTP } = require('../controllers/auth/otp');
+const { updatePassword, forgotPassword, resetPassword } = require('../controllers/auth/password');
 
 const router = express.Router()
 // these routes will start with '/api/v2/users'

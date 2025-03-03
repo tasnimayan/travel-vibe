@@ -12,7 +12,7 @@ const FavoriteTourSchema = new Schema<IFavorite>(
   { timestamps: true }
 );
 
-FavoriteSchema.index({ user: 1, tour: 1 }, { unique: true });
+FavoriteTourSchema.index({ user: 1, tour: 1 }, { unique: true });
 
 const FavoriteTour = mongoose.model("Favorite", FavoriteTourSchema);
 module.exports = FavoriteTour;

@@ -1,8 +1,8 @@
 const express = require('express');
 
 const {isAuthorized, isAvailableFor} = require('../middlewares/auth');
-const {verifyOTP, } = require('../controllers/user/userController');
 const { signUp, loginUser, logoutUser } = require('../controllers/admin/authController');
+const { verifyOTP } = require('../controllers/auth/otp');
 
 const router = express.Router()
 // these routes will start with '/api/v2/admin'
