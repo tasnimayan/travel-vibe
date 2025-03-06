@@ -2,6 +2,11 @@ const mongoose = require('mongoose')
 
 const organizationSchema = new mongoose.Schema(
 	{
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
 		name: {
 			type: String,
 			trim: true,
@@ -45,7 +50,7 @@ const organizationSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
-		profilePicture: {
+		profileImage: {
 			type: String,
 		},
 		verificationStatus: {

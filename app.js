@@ -18,7 +18,7 @@ const app = express();
 const userRouter = require('./src/routes/userRouter')
 const adminRouter = require('./src/routes/adminRouter');
 const orgRouter = require('./src/routes/organizationRouter');
-// const tourRouter = require('./src/routes/tourRouter');
+const tourRouter = require('./src/routes/tourRouter');
 // const guideRouter = require('./src/routes/guideRouter')
 const categoryRouter = require('./src/routes/categoryRouter');
 const { logger } = require('./src/utils/logger');
@@ -81,7 +81,7 @@ app.use('/api/v2/users', userRouter);
 app.use('/api/v2/admin', adminRouter); //done
 app.use('/api/v2/org', orgRouter); //done
 app.use('/api/v2/category', categoryRouter); //done
-// app.use('/api/v2/tours', tourRouter);
+app.use('/api/v2/tours', tourRouter);
 // app.use('/api/v2/guides', guideRouter);
 
 

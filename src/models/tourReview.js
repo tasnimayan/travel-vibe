@@ -1,6 +1,6 @@
 // updated:
-import mongoose from 'mongoose';
-import Tour from './tour';
+const mongoose = require('mongoose');
+const Tour = require('./tour');
 
 const reviewSchema = new mongoose.Schema(
 	{

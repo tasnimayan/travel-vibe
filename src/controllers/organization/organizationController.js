@@ -5,16 +5,8 @@ const { cookieOptions } = require('../../utils')
 
 // ========== SignUp Functionalities (v2)===========
 exports.signUp = async (req, res) => {
-  const { email, password, name, city, address, country } = req.body;
-
   try {
-    if (!email || !password) {
-      return res.status(400).send({
-        status: 'fail',
-        message: 'Must provide email and password'
-      });
-    }
-
+    const { email, password, name, city, address, country } = req.body;
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ status:"fail", message: 'Email is already registered.' });
@@ -54,7 +46,7 @@ exports.signUp = async (req, res) => {
         user: {
           _id: user._id,
           email: user.email,
-          name: userProfile.name,
+          name: organization.name,
           role: user.role
         },
       }
@@ -82,10 +74,8 @@ exports.loginUser = async (req, res) =>{
     if (!user) {
       return res.status(401).send({status:"fail", message:"No user found"});
     }
-
-    const userProfile = await Organization.findOne({user: user._id}).select('isActive isVerified')
     
-    if(!userProfile.isVerified){
+    if(!user.isVerified){
       return res.status(400).json({
         status: 'fail',
         message: 'Please verify your email'
@@ -121,5 +111,69 @@ module.exports.logoutUser = async (req, res) => {
     res.status(200).send({ status:"success", message: 'Logout successful!' });
   } catch (err) {
     res.status(400).send({ status:"fail", message: err.message });
+  }
+}
+
+module.exports.profileDetails = async (req, res) => {
+  const userId = req.user._id;
+
+  try {
+    // Find the organization linked to the user
+    const organization = await Organization.findOne({ user: userId })
+      .select('-__v -createdAt -updatedAt') // Exclude unnecessary fields
+      .populate('user', 'email role');
+
+    if (!organization) {
+      return res.status(404).json({status: "fail", message: 'Organization not found.' });
+    }
+
+    res.status(200).json({
+      status: "success",
+      message: 'Profile details fetched successfully.',
+      data: {
+        organization
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching profile details:', error);
+    res.status(500).json({ message: 'Internal server error.' });
+  }
+}
+
+
+// ========== Update Profile API (v2)===========
+module.exports.updateProfile = async (req, res) => {
+  const { bio, website, contactEmail, contactPhone, postalCode } = req.body;
+  const userId = req.user._id;
+
+  try {
+    const organization = await Organization.findOne({ user: userId });
+    if (!organization) {
+      return res.status(404).json({ message: 'Organization not found.' });
+    }
+
+    // Update the organization's profile
+    organization.bio = bio || organization.bio;
+    organization.website = website || organization.website;
+    organization.contactEmail = contactEmail || organization.contactEmail;
+    organization.contactPhone = contactPhone || organization.contactPhone;
+    organization.postalCode = postalCode || organization.postalCode;
+
+    if(req.file) {
+			const imagePath = req.file?.path.replace(/\\/g,'/').slice(6);
+      organization.profileImage = imagePath || organization.profileImage;
+
+		}
+
+    await organization.save();
+
+    res.status(200).json({
+      status: "success",
+      message: 'Profile updated successfully.',
+      data:{organization}
+    });
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    res.status(500).json({ message: 'Internal server error.' });
   }
 }

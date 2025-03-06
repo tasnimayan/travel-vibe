@@ -1,5 +1,5 @@
 // updated:
-import mongoose from 'mongoose'
+const mongoose = require('mongoose')
 
 const offerSchema = new mongoose.Schema(
   {
