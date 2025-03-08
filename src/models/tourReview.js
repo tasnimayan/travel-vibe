@@ -4,6 +4,11 @@ const Tour = require('./tour');
 
 const reviewSchema = new mongoose.Schema(
 	{
+		tour: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: 'Tour',
+			required: true,
+		},
 		review: {
 			type: String,
 			required: true,
@@ -29,11 +34,6 @@ const reviewSchema = new mongoose.Schema(
 			type: String,
 			enum: ['pending', 'approved', 'rejected', 'reported'],
 			default: 'approved'
-		},
-		tour: {
-			type: mongoose.Schema.Types.ObjectId,
-			ref: 'Tour',
-			required: true,
 		},
 		user: {
 			type: mongoose.Schema.Types.ObjectId,

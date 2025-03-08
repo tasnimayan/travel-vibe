@@ -43,7 +43,7 @@ const tourSchema = mongoose.Schema(
     
     policy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Policy'
+      ref: 'Policy',
     },
     category:{
       type: mongoose.Schema.Types.ObjectId,
@@ -76,7 +76,7 @@ tourSchema.methods.isDiscounted = ()=> {
   return this.discountPercentage > 0;
 };
 
-tourSchema.virtual('organizationDetails', {
+tourSchema.virtual('createdByDetails', {
   ref: 'Organization',
   localField: 'createdBy',
   foreignField: 'user',
@@ -84,15 +84,16 @@ tourSchema.virtual('organizationDetails', {
 });
 
 tourSchema.virtual('reviews', {
-	ref: 'Review',
-	localField: '_id',
-	foreignField: 'tour',
+  ref: 'TourReview',
+  localField: '_id',
+  foreignField: 'tour',
 });
 
-tourSchema.virtual('bookings', {
-	ref: 'Booking',
-	localField: '_id',
-	foreignField: 'tour',
+tourSchema.virtual('policyDetails', {
+	ref: 'Policy',
+	localField: 'policy',
+	foreignField: '_id',
+  justOne: true
 });
 
 

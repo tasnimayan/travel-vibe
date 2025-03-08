@@ -1,10 +1,10 @@
 // updated:
-import mongoose from 'mongoose'
+const mongoose = require('mongoose')
 
 const locationSchema = new mongoose.Schema(
   {
 		name: { type: String, required: true, trim: true },
-    description: { type: String, trim: true },
+    description: { type: String, trim: true, maxLength: 80 },
     country: {  type: String,  required: true,  trim: true },
     city: {   type: String,   trim: true },
     images: [{  type: String,  trim: true }],
@@ -58,9 +58,16 @@ const locationSchema = new mongoose.Schema(
 )
 
 // Indexes
-placeSchema.index({ weight: -1 });
-placeSchema.index({ name: 1, country: 1 }, { unique: true });
-placeSchema.index({ location: '2dsphere' });
+locationSchema.index({ weight: -1 });
+locationSchema.index({ name: 1, country: 1 }, { unique: true });
+locationSchema.index({ location: '2dsphere' });
+
+locationSchema.virtual('categoryDetails', {
+  ref: 'TourCategory',
+  localField: 'categories',
+  foreignField: '_id',
+  justOne: true
+});
 
 /**
 * Get Most Popular Locations
@@ -75,7 +82,7 @@ locationSchema.statics.getPopularLocations = async function(options = {}) {
   const {
     limit = 10,
     country = null,
-    select = 'name description city thumbnail location categories rating weight',
+    select = 'name description thumbnail',
     populateCategories = true
   } = options;
 

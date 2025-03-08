@@ -7,7 +7,7 @@ const unlink = util.promisify(fs.unlink)
 const path = require('path');
 
 
-// Create New category (complete)
+// Create New category (v2)
 exports.createTourCategory = async (req, res) =>{
 	try {
 		if (!req.file || !req.body.name) {

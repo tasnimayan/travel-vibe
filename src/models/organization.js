@@ -79,6 +79,12 @@ const organizationSchema = new mongoose.Schema(
       type: String, // Notes from admin during verification
       trim: true,
     },
+    socialMediaLinks: {
+      facebook: String,
+      instagram: String,
+      twitter: String,
+      linkedin: String,
+    },
     isActive: {
       type: Boolean,
       default: true,

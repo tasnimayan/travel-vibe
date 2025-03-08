@@ -1,25 +1,26 @@
 const express = require('express')
 const router = express.Router()
-const { getAllTours, createTour} = require('../controllers/tour/tourController')
-// const {createReview, getAllReviews, updateReview, deleteReview} = require('../controllers/tour/reviewController')
+const { getAllTours, createTour, processTourFilters, getTourDetails} = require('../controllers/tour/tourController')
+
 const upload = require('../helpers/multer')
 const {isAuthorized, isAvailableFor} = require('../middlewares/auth')
-// const { getPopularLocations, increaseLocationCount} = require('../controllers/tour/popularLocationController')
+const { getPopularLocations, incrementLocationWeight } = require('../controllers/tour/locationController')
 
-// const {getTopDestination, increaseDestinationWeight} = require('../controllers/tour/topDestinationController')
 const { validateCreateTour } = require('../middlewares/validators/tourValidator')
 
 
 router.route('/')
-  .get(getAllTours)
+  .get(processTourFilters, getAllTours)
   .post(isAuthorized, isAvailableFor('organization'), upload.array('photos', 20),validateCreateTour, createTour); 
 
 
-// router.route('/tour/:tourId')
-//   .get(getTourDetails)
+router.route('/tour/:tourId')
+  .get(getTourDetails)
 //   .post(isAuthorized, isAvailableFor('organization', 'admin'), upload.array('photos', 20), updateTour) //Need improvement
 //   .patch(isAuthorized, isAvailableFor('org'), deleteTour)
 
+router.get("/top-locations", getPopularLocations)
+router.put("/top-locations/:locationId", incrementLocationWeight)
 
 // // Tour Review Routes 
 // // api/tours/
@@ -41,7 +42,6 @@ router.route('/')
 
 // // router.get("/featured")
 // router.get("/discount", getDiscountedTours)
-// router.get("/top-location", getPopularLocations)
 // router.patch("/top-location/:locationId", increaseLocationCount)  //remove locationId and update depending on the location name
 // router.get("/nearby-location", getNearbyLocation)
 // router.get("/offers", getOffers)

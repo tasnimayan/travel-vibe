@@ -1,19 +1,78 @@
 
-const Tour = require('../../models/tour.js');
-const User = require('../../models/user.js');
-// const Nearby = require('../../models/nearby.js')
-const Offer = require('../../models/offer.js')
+const Tour = require('../../models/tour');
 const mongoose = require('mongoose')
 
+// Process tour filters and add them to the request object
+exports.processTourFilters = (req, res, next) => {
+  const filter = { startDate: { $gte: new Date() } };
 
-// Creating New tour
+  // Filter by tags
+  if (req.query.search) {
+    filter.tags = { $in: req.query.search.toLowerCase() };
+  }
+
+  // Filter by country
+  if (req.query.country) {
+    filter.country = req.query.country;
+  }
+
+  // Filter by status
+  if (req.query.status) {
+    filter.status = req.query.status;
+  }
+
+  // Filter by category (MongoDB ObjectID)
+  if (req.query.category) {
+    filter.category = new mongoose.Types.ObjectId(req.query.category);
+  }
+
+  // Filter by price range
+  if (req.query.minPrice || req.query.maxPrice) {
+    filter.price = {};
+    if (req.query.minPrice) {
+      filter.price.$gte = parseFloat(req.query.minPrice);
+    }
+    if (req.query.maxPrice) {
+      filter.price.$lte = parseFloat(req.query.maxPrice);
+    }
+  }
+
+  // Filter by rating range
+  if (req.query.minRating || req.query.maxRating) {
+    filter.rating = {};
+    if (req.query.minRating) {
+      filter.rating.$gte = parseFloat(req.query.minRating);
+    }
+    if (req.query.maxRating) {
+      filter.rating.$lte = parseFloat(req.query.maxRating);
+    }
+  }
+
+  // Filter by discount (tours with discounts)
+  if (req.query.hasDiscount === 'true') {
+    filter.discountPercentage = { $gt: 0 };
+  }
+
+  // Filter by group size
+  if (req.query.maxGroupSize) {
+    filter.maxGroupSize = { $lte: parseInt(req.query.maxGroupSize) };
+  }
+
+  req.filter = filter;
+
+  next();
+};
+
+// Creating New tour (complete)
 exports.createTour = async (req, res) => {
   let photos;
   if (req.files) {
     photos = req.files.map(item => item.path.replace(/\\/g, '/').slice(6));
   }
   const userId = new mongoose.Types.ObjectId(req.user._id);
-
+  if(!userId){
+    return res.status(400).send({ status:"fail", message: "User not found" });
+  }
   try {
     const {
       title,
@@ -87,6 +146,74 @@ exports.createTour = async (req, res) => {
   }
 };
 
+// Get All Tours with pagination (complete)
+exports.getAllTours = async (req, res) => {
+  try {
+    // Pagination and Filtering
+    const PAGE_SIZE = 12; // Default page size
+    const page = parseInt(req.query.page) || 1; // Current page (default: 1)
+    const limit = parseInt(req.query.limit) || PAGE_SIZE; // Items per page (default: 12)
+    const skip = (page - 1) * limit; // Skip items for pagination
+
+    // Fetch tours with filtering and pagination
+    const tours = await Tour.find(req.filter)
+      .skip(skip)
+      .limit(limit)
+      .populate('category', 'name') 
+      .populate('createdBy', 'name email')
+      .select('title description price currency startDate endDate duration startingLocation maxGroupSize highlightedPlaces images')
+
+    const totalTours = await Tour.countDocuments(req.filter);
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Tours fetched successfully',
+      data: {
+        tours,
+        totalTours,
+        totalPages: Math.ceil(totalTours / limit),
+        currentPage: page,
+      },
+      
+    });
+  } catch (err) {
+    res.status(500).json({ status: 'error', message: 'Internal server error', error: err.message });
+  }
+};
+
+// // Get Tour details with specific TourID
+exports.getTourDetails = async (req, res) => {
+  try {
+    const tourId = req.params.tourId;
+    if (!mongoose.Types.ObjectId.isValid(tourId)) {
+      return res.status(400).json({ status: 'fail', message: 'Invalid tour ID' });
+    }
+
+    // Fetch the tour and populate related fields
+    const tour = await Tour.findById(tourId)
+      .populate('category', 'name') // Populate category name
+      .populate('createdBy', 'name email') // Populate organization details
+      .populate('policy', 'name description') // Populate policy details
+      .populate('packages', 'name price'); // Populate package details (if applicable)
+
+    // If tour is not found
+    if (!tour) {
+      return res.status(404).json({ status: 'fail', message: 'Tour not found' });
+    }
+
+    // Send the tour details in the response
+    res.status(200).json({
+      status: 'success',
+      message: 'Tour details fetched successfully',
+      data: tour,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ status: 'error', message: 'Internal server error', error: err.message });
+  }
+};
+
+
 
 // // Update tour with TourID 
 // exports.updateTour = async (req, res) =>{
@@ -156,62 +283,8 @@ exports.createTour = async (req, res) => {
 //   }
 // }
 
-// Get All Tours with pagination (complete)
-exports.getAllTours = async (req, res)=> {
-  try {
-    // Pagination and item Limiter
-    const PAGE_SIZE = 5;
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || PAGE_SIZE;
-    const skip = (page - 1) * limit;
 
-    let currentDate = new Date();
-    //get the matched documents from db
-    let matchStage = {
-      $match:{"startDate":{$gte:currentDate}}
-    }
 
-    // Search on Database
-    let data = await Tour.aggregate([
-      matchStage,
-      {$lookup: {from:"organizations", localField:"orgId", foreignField:"_id", as:"orgData", pipeline: [
-        {$project:{'name':1, 'photo':1}},
-      ]}},
-      {$unwind:"$orgData"},
-      {$skip:skip},
-      {$limit:limit},
-    ])
-
-    // Get the total count for pagination
-    let count = await Tour.find({
-      "startDate":{$gte:currentDate}}).count()
-    
-    if (data.length === 0) {
-      return res.status(404).send({ message: 'No results match this query' });
-    }
-    res.status(200).send({ totalPages:Math.ceil(count/limit), data:data });
-
-  } catch (err) {
-    console.log(err)
-    res.status(400).send(err.message);
-  }
-}
-
-// // Get Tour details with specific TourID
-// exports.getTourDetails = async (req, res)=>{
-//   try {
-//     let tourId = new mongoose.Types.ObjectId(req.params.tourId)
-//     const tour = await Tour.findById(tourId)
-
-//     if (!tour) {
-//       return res.status(404).send({ message: 'No tour found' });
-//     }
-//     res.status(200).send({message:'success', data:tour});
-//   } catch (err) {
-//     console.log(err)
-//     res.status(400).send({message:err.message});
-//   }
-// }
 
 // // Queried tours | query with _location_country_startDate_  (complete)
 // exports.SearchTour = async (req, res) => {
