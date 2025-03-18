@@ -23,7 +23,7 @@ const featuredTourSchema = new mongoose.Schema(
 		startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },
 		isActive: { type: Boolean, default: true },
-		
+    country: { type: String, default: null },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Admin',
@@ -33,7 +33,7 @@ const featuredTourSchema = new mongoose.Schema(
 	{ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 )
 
-featuredTourSchema.index({ startDate: 1, endDate: 1, isActive: 1 });
+featuredTourSchema.index({ endDate: 1, isActive: 1 });
 featuredTourSchema.index({ featuredType: 1, priority: -1 });
 
 
@@ -53,15 +53,6 @@ featuredTourSchema.pre('save', async function(next) {
     throw new Error('Start date cannot be after end date');
   }
   
-  next();
-});
-
-// Populate tour details when querying
-featuredTourSchema.pre(/^find/, function(next) {
-  this.populate({
-    path: 'tour',
-    select: 'title description price images startDate endDate'
-  });
   next();
 });
 

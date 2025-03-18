@@ -1,10 +1,13 @@
-import mongoose, { Schema } from "mongoose";
+const mongoose = require("mongoose");
 
-const FavoriteTourSchema = new Schema<IFavorite>(
+const FavoriteTourSchema = new mongoose.Schema(
   {
-    user : { type: Schema.Types.ObjectId, ref: "UserProfile", required: true },
+    user : { 
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "UserProfile",
+      required: true },
     tour: { 
-      type: Schema.Types.ObjectId,
+      type: mongoose.Schema.Types.ObjectId,
       ref:"Tour",
       required: true 
     },

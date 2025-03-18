@@ -1,6 +1,7 @@
 
-const Tour = require('../../models/tour');
 const mongoose = require('mongoose')
+const Tour = require('../../models/tour');
+const FavoriteTour = require("../../models/favorite"); 
 
 // Process tour filters and add them to the request object
 exports.processTourFilters = (req, res, next) => {
@@ -80,12 +81,12 @@ exports.createTour = async (req, res) => {
       price,
       bookingDeposit,
       discountPercentage,
-      // discountAmount,
+      discountAmount,
       currency,
       startDate,
       endDate,
       duration,
-      startingLocation,
+      destination,
       highlightedPlaces,
       maxGroupSize,
       pickupPoint,
@@ -110,13 +111,13 @@ exports.createTour = async (req, res) => {
       price,
       bookingDeposit,
       discountPercentage,
-      // discountAmount,
+      discountAmount,
       currency,
       startDate,
       endDate,
       duration,
       images: photos ? photos : [],
-      startingLocation,
+      destination,
       highlightedPlaces,
       maxGroupSize,
       pickupPoint,
@@ -151,32 +152,37 @@ exports.getAllTours = async (req, res) => {
   try {
     // Pagination and Filtering
     const PAGE_SIZE = 12; // Default page size
-    const page = parseInt(req.query.page) || 1; // Current page (default: 1)
-    const limit = parseInt(req.query.limit) || PAGE_SIZE; // Items per page (default: 12)
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || PAGE_SIZE;
     const skip = (page - 1) * limit; // Skip items for pagination
 
     // Fetch tours with filtering and pagination
     const tours = await Tour.find(req.filter)
       .skip(skip)
       .limit(limit)
-      .populate('category', 'name') 
-      .populate('createdBy', 'name email')
-      .select('title description price currency startDate endDate duration startingLocation maxGroupSize highlightedPlaces images')
+      .populate({
+        path: 'createdBy',
+        localField: 'createdBy',
+        foreignField: 'user',
+        justOne: true,
+        select: '-_id name profileImage rating'
+      })
+      .select('title description price currency startDate endDate duration destination maxGroupSize highlightedPlaces images rating ratingQuantity createdBy')
 
     const totalTours = await Tour.countDocuments(req.filter);
 
     res.status(200).json({
       status: 'success',
       message: 'Tours fetched successfully',
-      data: {
-        tours,
-        totalTours,
+      data: tours,
+      pagination: {
+        page: parseInt(page),
+        total: totalTours,
         totalPages: Math.ceil(totalTours / limit),
-        currentPage: page,
-      },
-      
+      }      
     });
   } catch (err) {
+    console.log(err)
     res.status(500).json({ status: 'error', message: 'Internal server error', error: err.message });
   }
 };
@@ -191,10 +197,16 @@ exports.getTourDetails = async (req, res) => {
 
     // Fetch the tour and populate related fields
     const tour = await Tour.findById(tourId)
-      .populate('category', 'name') // Populate category name
-      .populate('createdBy', 'name email') // Populate organization details
-      .populate('policy', 'name description') // Populate policy details
-      .populate('packages', 'name price'); // Populate package details (if applicable)
+      .populate('category', 'name')
+      .populate({
+        path: 'createdBy',
+        localField: 'createdBy',
+        foreignField: 'user',
+        justOne: true,
+        select: '-_id name profileImage rating'
+      })
+      .populate('policy', 'name description')
+      .populate('packages', 'name price');
 
     // If tour is not found
     if (!tour) {
@@ -212,6 +224,7 @@ exports.getTourDetails = async (req, res) => {
     res.status(500).json({ status: 'error', message: 'Internal server error', error: err.message });
   }
 };
+
 
 
 
@@ -283,81 +296,6 @@ exports.getTourDetails = async (req, res) => {
 //   }
 // }
 
-
-
-
-// // Queried tours | query with _location_country_startDate_  (complete)
-// exports.SearchTour = async (req, res) => {
-//   let searchedCountry = req.query.country || ''
-//   let searchedLocation = req.query.location || ''
-  
-//   const PAGE_SIZE = 6;
-//   const page = parseInt(req.query.page) || 1;
-//   const limit = parseInt(req.query.limit) || PAGE_SIZE;
-//   const skip = (page - 1) * limit
-  
-//   try{
-//     let searchDate = req.query.startDate? new Date(req.query.startDate.toString()) : new Date();
-//     console.log(`country:${searchedCountry}, location:${searchedLocation}, date:${searchDate}`)
-
-//     // Match Tours of specific country
-//     let matchWithCountry = {
-//       $match:{
-//         $and:[
-//           {"startDate":{$gte:searchDate}},
-//           {"country":searchedCountry}
-//         ]
-//       }
-//     }
-//     // Match Tours of specific location
-//     let matchWithLocation = {
-//       $match:{
-//         $and:[
-//           {"startDate":{$gte:searchDate}},
-//           {$or:[{"title":{$regex:".*"+searchedLocation+".*", $options:"i"}}, {"destination":{$regex:".*"+searchedLocation+".*", $options:"i"}}]}
-//         ]
-//       }
-//     }
-//     // Match Tours of specific country and location
-//     let matchWithCountryLocation = {
-//       $match:{
-//         $and:[
-//           {"startDate":{$gte:searchDate}},
-//           {"country":searchedCountry},
-//           {$or:[{"title":{$regex:".*"+searchedLocation+".*", $options:"i"}}, {"destination":{$regex:".*"+searchedLocation+".*", $options:"i"}}]}
-//         ]
-//       }
-//     }
-
-//     let matchStage = searchedCountry ? searchedLocation? matchWithCountryLocation: matchWithCountry : matchWithLocation
-
-//     let data = await Tour.aggregate([
-//       matchStage,
-//       {$lookup: {from:"organizations", localField:"orgId", foreignField:"_id", as:"orgData", pipeline: [
-//         {$project:{'name':1, 'photo':1}},
-//       ]}},
-//       {$unwind:"$orgData"},
-//       // {$project:{"comments":0, "packages":0, "policy":0, "react":0}},
-//       {$skip:skip},
-//       {$limit:limit},
-//     ])
-
-//     let count = await Tour.aggregate([
-//       matchStage,
-//       {$count:"totalItem"}
-//     ])
-    
-//     count = count[0]?.totalItem || 0
-
-//     if (data.length === 0) {
-//       return res.status(404).send({ data:"", message: 'No results match this query' });
-//     }
-//     res.status(200).send({ totalPages:Math.ceil(count/limit), data:data });
-
-//   } catch (err) {
-//     res.status(400).send(err.message);
-//   }
-// }
 
 // // Get Discounted Tours (complete)
 // exports.getDiscountedTours = async (req, res)=> {
@@ -463,3 +401,119 @@ exports.getTourDetails = async (req, res) => {
 //     res.status(400).send(err.message);
 //   }
 // }
+
+
+// Get All Tours with pagination (complete)
+exports.getActivitiesTour = async (req, res) => {
+  try {
+    // Pagination and Filtering
+    const PAGE_SIZE = 12; // Default page size
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || PAGE_SIZE;
+    const skip = (page - 1) * limit; // Skip items for pagination
+
+    // Fetch tours with filtering and pagination
+    const tours = await Tour.find({
+      category: "67d329b4c523a039ff263649"
+    })
+      .skip(skip)
+      .limit(limit)
+      .select('title price currency duration destination maxGroupSize images')
+
+    const totalTours = await Tour.countDocuments({category: "67d329b4c523a039ff263649"});
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Activity fetched successfully',
+      data: tours,
+      pagination: {
+        page: parseInt(page),
+        total: totalTours,
+        totalPages: Math.ceil(totalTours / limit),
+      }
+      
+    });
+  } catch (err) {
+    console.log(err)
+    res.status(500).json({ status: 'error', message: 'Internal server error', error: err.message });
+  }
+};
+
+exports.getPopularTours = async (req, res) => {
+  const PAGE_SIZE = 10
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || PAGE_SIZE;
+  const minReviews = 5; // Default minimum reviews: 5
+  const skip = (page - 1) * limit;
+
+  try {
+    // Fetch popular tours based on rating and number of reviews
+    const popularTours = await Tour.find({
+      startDate: { $gte: new Date() },
+      isActive: true,
+      rating: { $gte: 4 },
+      ratingQuantity: { $gte: minReviews },
+    })
+    .populate({
+      path: "category",
+      select: "name",
+    })
+    .select("title category destination rating price currency images startDate endDate")
+      .sort({ rating: -1, ratingQuantity: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    // Count total documents for pagination metadata
+    const total = await Tour.countDocuments({
+      rating: { $gte: 4 },
+      ratingQuantity: { $gte: minReviews },
+    });
+
+    // Calculate total pages
+    const totalPages = Math.ceil(total / limit);
+
+    // Return response with paginated data
+    return res.status(200).json({
+      message: "Popular tours fetched successfully",
+      data: popularTours,
+      pagination: {
+        page,
+        total,
+        totalPages,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching popular tours:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// Add or remove a tour from favorites
+exports.addOrRemoveFavorite = async (req, res) => {
+  const { tourId } = req.params;
+
+  const userId = req.user._id;
+
+  if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(tourId))   {
+    return res.status(400).json({ status: "fail", message: "Invalid user ID or tour ID" });
+  }
+
+  try {
+    // Check if the tour is already favorited by the user
+    const existingFavorite = await FavoriteTour.findOne({ user: userId, tour: tourId });
+
+    if (existingFavorite) {
+      // If it exists, remove it from favorites
+      await FavoriteTour.deleteOne({ _id: existingFavorite._id });
+      return res.status(200).json({ status: "success", message: "Tour removed from favorites" });
+    } else {
+      // If it doesn't exist, add it to favorites
+      const newFavorite = new FavoriteTour({ user: userId, tour: tourId });
+      await newFavorite.save();
+      return res.status(200).json({ status: "success", message: "Tour added to favorites", data: newFavorite });
+    }
+  } catch (error) {
+    console.error("Error updating favorites:", error);
+    return res.status(500).json({ status: "error", message: "Internal server error" });
+  }
+}

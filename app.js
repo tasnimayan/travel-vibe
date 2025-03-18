@@ -63,7 +63,7 @@ if (process.env.NODE_ENV === 'development') {
 // ========   Database Connection   ========
 // mongoose.set('debug', process.env.NODE_ENV === 'development');
 mongoose
-  .connect(process.env.DATABASE,{autoIndex:false}) //,{autoIndex:false}
+  .connect(process.env.DATABASE,{autoIndex:true}) //,{autoIndex:false}
   .then(() => console.log('MONGODB connection successful'))
   .catch(err => console.log(err));
 
@@ -83,7 +83,6 @@ app.use('/api/v2/org', orgRouter); //done
 app.use('/api/v2/category', categoryRouter); //done
 app.use('/api/v2/tours', tourRouter);
 // app.use('/api/v2/guides', guideRouter);
-
 
 //! requests that pass the route handlers --> not caught
 

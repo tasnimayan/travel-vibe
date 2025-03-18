@@ -129,7 +129,6 @@ locationSchema.statics.getLocationsByCategory = async function(categoryId, optio
     .select(select)
     .sort(sort)
     .limit(limit)
-    .populate('categories', 'name');
 };
 
 

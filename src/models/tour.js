@@ -1,7 +1,9 @@
 // updated:
 const mongoose = require('mongoose')
-const TourReview = require('./tourReview')
-const { packageSchema } = require('./tourPackage')
+const { packageSchema } = require('./tourPackage');
+const COUNTRY_CODES = require('../lib/countryCode');
+const Policy = require('./policy');
+const Organization = require('./organization');
 
 const tourSchema = mongoose.Schema(
   {
@@ -15,17 +17,17 @@ const tourSchema = mongoose.Schema(
       type: Number,
       required: false,
       default: 0, min: 0 },
-    currency: { type: String, enum: ['USD', 'EUR', 'INR', 'GBP'], default: 'USD' },
+    currency: { type: String, enum: ['BDT', 'USD', 'EUR', 'INR', 'GBP'], default: 'USD' },
     startDate: { type: Date },
     endDate: { type: Date },
     duration: { type: String }, 
     images: [String],
-    startingLocation: { type: String },
+    destination: { type: String },
     highlightedPlaces: [{ type: String }],
     maxGroupSize: { type: Number, min: 1},
     pickupPoint: [ String ],
     departureTime: { type: Date },
-    rating: { type:Number, default:0, max:5, set: val => ((val * 10) / 10).toFixed(2) },
+    rating: { type: Number, default:0, max:5, set: val => ((val * 10) / 10).toFixed(2) },
     ratingQuantity: { type: Number },
     packages: [packageSchema],
     amenities: [{ type: String }], 
@@ -37,6 +39,7 @@ const tourSchema = mongoose.Schema(
       }]
     }],
     country: { type:String },
+    countryCode: { type:String, uppercase: true, enum: Object.keys(COUNTRY_CODES), required: true },
     tags: [{ type: String }],
     status: { type: String, enum: ['upcoming', 'ongoing', 'completed'], default: 'ongoing' },
     isActive: { type: Boolean, default:true },
@@ -80,7 +83,8 @@ tourSchema.virtual('createdByDetails', {
   ref: 'Organization',
   localField: 'createdBy',
   foreignField: 'user',
-  justOne: true
+  justOne: true,
+  select: 'name profileImage rating'
 });
 
 tourSchema.virtual('reviews', {
@@ -107,48 +111,19 @@ tourSchema.methods.toJSON = function () {
 
 
 tourSchema.pre('save', async function(next) {
-  if (!this.isModified('rating') && !this.isModified('ratingQuantity')) {
-    return next();
+  if (this.countryCode) {
+    this.country = COUNTRY_CODES[this.countryCode];
   }
-
-  const stats = await TourReview.aggregate([
-    {
-      $match: { 
-        tour: this._id,
-        status: 'approved'
-      }
-    },
-    {
-      $group: {
-        _id: '$tour',
-        numOfRatings: { $sum: 1 },
-        avgRating: { $avg: '$rating' }
-      }
-    }
-  ]);
-
-  if (stats.length > 0) {
-    this.ratingQuantity = stats[0].numOfRatings;
-    this.rating = stats[0].avgRating;
-  } else {
-    this.ratingQuantity = 0;
-    this.rating = 0;
-  }
-
   next();
 });
 
-
-
-// Populate relational data to the output
-tourSchema.pre(/^find/, function (next) {
-	this.populate({
-		path: 'createdBy',
-		select: 'name photo address',
-	});
-	next();
+tourSchema.pre(['updateOne', 'findOneAndUpdate'], function(next) {
+  const update = this.getUpdate();
+  if (update.countryCode) {
+    update.country = COUNTRY_CODES[update.countryCode.toUpperCase()];
+  }
+  next();
 });
-
 
 const Tour = mongoose.model('Tour', tourSchema);
 

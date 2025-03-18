@@ -12,17 +12,18 @@ const router = express.Router()
 // router.get('/user', isAuthorized, getUser)
 router.post('/signup', signUp)
 router.post('/login', loginUser)
-router.post('/verify', verifyOTP)
+router.post('/verify/otp', verifyOTP)
 router.post('/otp/resend', resendOTP)
+router.get('/user', isAuthorized, getUser)
 
 // yet to work for v2
-router.get('/logout', isAuthorized, isAvailableFor('user', 'organization', 'admin'), logoutUser)
-router.get('/profile', isAuthorized, isAvailableFor('user', 'organization'), getUserProfile)  // User profile
-router.post('/profile/update', isAuthorized, isAvailableFor('user', 'organization'), upload.single('avatar'), updateUser)
-router.post('/update/password', isAuthorized, updatePassword)
-router.patch('/account/delete/', isAuthorized, deleteUser)
-router.post('/account/recover/', forgotPassword)
-router.patch('/account/recover/:token', resetPassword);
+// router.get('/logout', isAuthorized, isAvailableFor('user', 'organization', 'admin'), logoutUser)
+// router.get('/profile', isAuthorized, isAvailableFor('user', 'organization'), getUserProfile)  // User profile
+// router.post('/profile/update', isAuthorized, isAvailableFor('user', 'organization'), upload.single('avatar'), updateUser)
+// router.post('/update/password', isAuthorized, updatePassword)
+// router.patch('/account/delete/', isAuthorized, deleteUser)
+// router.post('/account/recover/', forgotPassword)
+// router.patch('/account/recover/:token', resetPassword);
 
 
 module.exports = router;

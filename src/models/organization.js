@@ -88,6 +88,10 @@ const organizationSchema = new mongoose.Schema(
     isActive: {
       type: Boolean,
       default: true,
+    },
+    rating: {
+      type: Number,
+      default: 0,
     }
 	},
 	{ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true }  }
@@ -95,7 +99,7 @@ const organizationSchema = new mongoose.Schema(
 
 organizationSchema.virtual('tours', {
   ref: 'Tour',
-  localField: '_id',
+  localField: 'user',
   foreignField: 'createdBy',
 });
 

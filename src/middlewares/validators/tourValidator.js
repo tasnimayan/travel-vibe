@@ -8,7 +8,7 @@ module.exports.validateCreateTour = [
   body('startDate').isISO8601().withMessage('Start date must be a valid date in ISO8601 format (e.g., YYYY-MM-DD)'),
   body('endDate').optional().isISO8601().withMessage('End date must be a valid date in ISO8601 format (e.g., YYYY-MM-DD)'),
   body('duration').optional().isString().withMessage('Duration must be a string'),
-  body('startingLocation').optional().isString().withMessage('Starting location must be a string'),
+  body('destination').optional().isString().withMessage('Destination must be a string'),
   body('maxGroupSize').optional().isInt({ min: 1 }).withMessage('Max group size must be a positive integer'),
   body('departureTime').optional().isISO8601().withMessage('Departure time must be a valid date in ISO8601 format (e.g., YYYY-MM-DDTHH:MM:SSZ)'),
   body('ratingQuantity').optional().isInt({ min: 0 }).withMessage('Rating quantity must be a non-negative integer'),

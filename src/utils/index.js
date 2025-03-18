@@ -1,4 +1,4 @@
-
+const mongoose = require("mongoose");
 
 const cookieOptions = {
 	expires: new Date(
@@ -7,6 +7,11 @@ const cookieOptions = {
   secure: true,  // Only sent over HTTPS
 };
 
+const isValidObjectId = (id) => {
+  return mongoose.Types.ObjectId.isValid(id);
+}
+
 module.exports = {
   cookieOptions,
+  isValidObjectId,
 };

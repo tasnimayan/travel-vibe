@@ -1,4 +1,5 @@
-const mongoose = require('mongoose')
+const mongoose = require('mongoose');
+const COUNTRY_CODES = require('../lib/countryCode');
 
 // Creating User Schema
 const userProfileSchema = new mongoose.Schema(
@@ -16,15 +17,13 @@ const userProfileSchema = new mongoose.Schema(
 		},
     imagePath: { type: String, default: 'default.jpg' },
     bio: { type: String, maxlength: 500 },
-		location:{
-			country: String,
-			city:String,
-			address:{
-				type: String,
-				trim: true,
-				minLength: 2,
-				maxLength: 99
-			}
+		country: {type: String, enum: Object.keys(COUNTRY_CODES)},
+		city: {type: String, trim: true, transform: (val) => val.toLowerCase()},
+		address:{
+			type: String,
+			trim: true,
+			minLength: 2,
+			maxLength: 99
 		},
     preferences: {
       interests: [{ type: String }], 

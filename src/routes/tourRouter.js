@@ -1,12 +1,13 @@
 const express = require('express')
 const router = express.Router()
-const { getAllTours, createTour, processTourFilters, getTourDetails} = require('../controllers/tour/tourController')
+const { getAllTours, createTour, processTourFilters, getTourDetails, addOrRemoveFavorite, getPopularTours, getActivitiesTour} = require('../controllers/tour/tourController')
 
 const upload = require('../helpers/multer')
 const {isAuthorized, isAvailableFor} = require('../middlewares/auth')
-const { getPopularLocations, incrementLocationWeight } = require('../controllers/tour/locationController')
+const { getPopularLocations, incrementLocationWeight, getTouristAttractions } = require('../controllers/tour/locationController')
 
 const { validateCreateTour } = require('../middlewares/validators/tourValidator')
+const { addFeaturedTour, getFeaturedTours } = require('../controllers/admin/featuredTourController')
 
 
 router.route('/')
@@ -21,6 +22,12 @@ router.route('/tour/:tourId')
 
 router.get("/top-locations", getPopularLocations)
 router.put("/top-locations/:locationId", incrementLocationWeight)
+
+router.get("/favorites/:tourId", isAuthorized, isAvailableFor('user'), addOrRemoveFavorite)
+router.get("/popular", getPopularTours)
+router.route("/featured")
+  .get(getFeaturedTours)
+  .post(isAuthorized, isAvailableFor('admin'), addFeaturedTour)
 
 // // Tour Review Routes 
 // // api/tours/
@@ -40,7 +47,8 @@ router.put("/top-locations/:locationId", incrementLocationWeight)
 // router.route("/search")
 //   .get(SearchTour)
 
-// // router.get("/featured")
+router.get("/attractions", getTouristAttractions)
+router.get("/activity", getActivitiesTour)
 // router.get("/discount", getDiscountedTours)
 // router.patch("/top-location/:locationId", increaseLocationCount)  //remove locationId and update depending on the location name
 // router.get("/nearby-location", getNearbyLocation)
