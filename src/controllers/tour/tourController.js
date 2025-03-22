@@ -1,62 +1,82 @@
-
-const mongoose = require('mongoose')
-const Tour = require('../../models/tour');
-const FavoriteTour = require("../../models/favorite"); 
+const mongoose = require("mongoose");
+const Tour = require("../../models/tour");
+const FavoriteTour = require("../../models/favorite");
 
 // Process tour filters and add them to the request object
 exports.processTourFilters = (req, res, next) => {
-  const filter = { startDate: { $gte: new Date() } };
+  const { search, country, status, category, minPrice, maxPrice, minRating, maxRating, hasDiscount, maxGroupSize, startDate, endDate } = req.query;
+
+  const dateRange = {
+    startDate: null,
+    endDate: null,
+  };
+
+  try {
+    dateRange.startDate = startDate ? new Date(startDate) : new Date();
+    dateRange.endDate = endDate ? new Date(endDate) : null;
+    if (isNaN(dateRange.startDate.getTime())) {
+      throw new Error("Invalid date format");
+    }
+  } catch (err) {
+    dateRange.startDate = new Date();
+  }
+
+  const filter = { startDate: { $gte: dateRange.startDate } };
+
+  if (dateRange.endDate) {
+    filter.endDate = { $lte: dateRange.endDate };
+  }
 
   // Filter by tags
-  if (req.query.search) {
-    filter.tags = { $in: req.query.search.toLowerCase() };
+  if (search) {
+    filter.tags = { $in: search.toLowerCase() };
   }
 
   // Filter by country
-  if (req.query.country) {
-    filter.country = req.query.country;
+  if (country) {
+    filter.country = country;
   }
 
   // Filter by status
-  if (req.query.status) {
-    filter.status = req.query.status;
+  if (status) {
+    filter.status = status;
   }
 
   // Filter by category (MongoDB ObjectID)
-  if (req.query.category) {
-    filter.category = new mongoose.Types.ObjectId(req.query.category);
+  if (category) {
+    filter.category = new mongoose.Types.ObjectId(category);
   }
 
   // Filter by price range
-  if (req.query.minPrice || req.query.maxPrice) {
+  if (minPrice || maxPrice) {
     filter.price = {};
-    if (req.query.minPrice) {
-      filter.price.$gte = parseFloat(req.query.minPrice);
+    if (minPrice) {
+      filter.price.$gte = parseFloat(minPrice);
     }
-    if (req.query.maxPrice) {
-      filter.price.$lte = parseFloat(req.query.maxPrice);
+    if (maxPrice) {
+      filter.price.$lte = parseFloat(maxPrice);
     }
   }
 
   // Filter by rating range
-  if (req.query.minRating || req.query.maxRating) {
+  if (minRating || maxRating) {
     filter.rating = {};
-    if (req.query.minRating) {
-      filter.rating.$gte = parseFloat(req.query.minRating);
+    if (minRating) {
+      filter.rating.$gte = parseFloat(minRating);
     }
-    if (req.query.maxRating) {
-      filter.rating.$lte = parseFloat(req.query.maxRating);
+    if (maxRating) {
+      filter.rating.$lte = parseFloat(maxRating);
     }
   }
 
   // Filter by discount (tours with discounts)
-  if (req.query.hasDiscount === 'true') {
+  if (hasDiscount === "true") {
     filter.discountPercentage = { $gt: 0 };
   }
 
   // Filter by group size
-  if (req.query.maxGroupSize) {
-    filter.maxGroupSize = { $lte: parseInt(req.query.maxGroupSize) };
+  if (maxGroupSize) {
+    filter.maxGroupSize = { $lte: parseInt(maxGroupSize) };
   }
 
   req.filter = filter;
@@ -68,11 +88,11 @@ exports.processTourFilters = (req, res, next) => {
 exports.createTour = async (req, res) => {
   let photos;
   if (req.files) {
-    photos = req.files.map(item => item.path.replace(/\\/g, '/').slice(6));
+    photos = req.files.map((item) => item.path.replace(/\\/g, "/").slice(6));
   }
   const userId = new mongoose.Types.ObjectId(req.user._id);
-  if(!userId){
-    return res.status(400).send({ status:"fail", message: "User not found" });
+  if (!userId) {
+    return res.status(400).send({ status: "fail", message: "User not found" });
   }
   try {
     const {
@@ -137,13 +157,13 @@ exports.createTour = async (req, res) => {
     });
 
     if (!tour) {
-      return res.status(400).send({ status:"fail", message: "Failed to create tour" });
+      return res.status(400).send({ status: "fail", message: "Failed to create tour" });
     }
 
-    res.status(201).send({ status:"success", message: 'Tour created successfully!', data: tour });
+    res.status(201).send({ status: "success", message: "Tour created successfully!", data: tour });
   } catch (err) {
     console.error(err);
-    res.status(500).send({ status:"fail", message: err.message || 'Internal server error' });
+    res.status(500).send({ status: "fail", message: err.message || "Internal server error" });
   }
 };
 
@@ -151,7 +171,7 @@ exports.createTour = async (req, res) => {
 exports.getAllTours = async (req, res) => {
   try {
     // Pagination and Filtering
-    const PAGE_SIZE = 12; // Default page size
+    const PAGE_SIZE = 6; // Default page size
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || PAGE_SIZE;
     const skip = (page - 1) * limit; // Skip items for pagination
@@ -161,29 +181,37 @@ exports.getAllTours = async (req, res) => {
       .skip(skip)
       .limit(limit)
       .populate({
-        path: 'createdBy',
-        localField: 'createdBy',
-        foreignField: 'user',
+        path: "createdBy",
+        localField: "createdBy",
+        foreignField: "user",
         justOne: true,
-        select: '-_id name profileImage rating'
+        select: "-_id name profileImage rating",
       })
-      .select('title description price currency startDate endDate duration destination maxGroupSize highlightedPlaces images rating ratingQuantity createdBy')
+      .select(
+        "title description price currency startDate endDate duration destination maxGroupSize highlightedPlaces images rating ratingQuantity createdBy"
+      );
 
     const totalTours = await Tour.countDocuments(req.filter);
 
+    const transformedTours = tours.map((tour) => {
+      const tourObject = tour.toObject();
+      tourObject.images = tourObject.images.length > 0 ? [tourObject.images[0]] : [];
+      return tourObject;
+    });
+
     res.status(200).json({
-      status: 'success',
-      message: 'Tours fetched successfully',
-      data: tours,
+      status: "success",
+      message: "Tours fetched successfully",
+      data: transformedTours,
       pagination: {
         page: parseInt(page),
         total: totalTours,
         totalPages: Math.ceil(totalTours / limit),
-      }      
+      },
     });
   } catch (err) {
-    console.log(err)
-    res.status(500).json({ status: 'error', message: 'Internal server error', error: err.message });
+    console.log(err);
+    res.status(500).json({ status: "error", message: "Internal server error", error: err.message });
   }
 };
 
@@ -192,43 +220,40 @@ exports.getTourDetails = async (req, res) => {
   try {
     const tourId = req.params.tourId;
     if (!mongoose.Types.ObjectId.isValid(tourId)) {
-      return res.status(400).json({ status: 'fail', message: 'Invalid tour ID' });
+      return res.status(400).json({ status: "fail", message: "Invalid tour ID" });
     }
 
     // Fetch the tour and populate related fields
     const tour = await Tour.findById(tourId)
-      .populate('category', 'name')
+      .populate("category", "name")
       .populate({
-        path: 'createdBy',
-        localField: 'createdBy',
-        foreignField: 'user',
+        path: "createdBy",
+        localField: "createdBy",
+        foreignField: "user",
         justOne: true,
-        select: '-_id name profileImage rating'
+        select: "-_id name profileImage rating",
       })
-      .populate('policy', 'name description')
-      .populate('packages', 'name price');
+      .populate("policy", "name description")
+      .populate("packages", "name price");
 
     // If tour is not found
     if (!tour) {
-      return res.status(404).json({ status: 'fail', message: 'Tour not found' });
+      return res.status(404).json({ status: "fail", message: "Tour not found" });
     }
 
     // Send the tour details in the response
     res.status(200).json({
-      status: 'success',
-      message: 'Tour details fetched successfully',
+      status: "success",
+      message: "Tour details fetched successfully",
       data: tour,
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ status: 'error', message: 'Internal server error', error: err.message });
+    res.status(500).json({ status: "error", message: "Internal server error", error: err.message });
   }
 };
 
-
-
-
-// // Update tour with TourID 
+// // Update tour with TourID
 // exports.updateTour = async (req, res) =>{
 //   const baseURL = req.headers.host
 //   try {
@@ -241,15 +266,14 @@ exports.getTourDetails = async (req, res) => {
 //     }
 
 //     const updateFields = ["title", "startLocation", "destination", "duration", "description", "packages","personCapacity", "itinerary", "price", "bookingMoney", "startDate", "startTime", "policy",]
-  
 
 //     // const tour = await Tour.findByIdAndUpdate( id, updateData,{new: true, runValidators: true,});
 //     const tour = await Tour.findOne({_id:tourId, user:{$eq:userId}});
-    
+
 //     if (!tour) {
 //       return res.status(404).send({ message: 'Tour not found' });
 //     }
-    
+
 //     for(key in req.body){
 //       if(updateFields.includes(key)){
 //         tour[key] = req.body.key;
@@ -296,7 +320,6 @@ exports.getTourDetails = async (req, res) => {
 //   }
 // }
 
-
 // // Get Discounted Tours (complete)
 // exports.getDiscountedTours = async (req, res)=> {
 //   try {
@@ -330,7 +353,7 @@ exports.getTourDetails = async (req, res) => {
 //       {$count:"totalItem"}
 //     ])
 //     count = count[0]?.totalItem || 0
-    
+
 //     if (data.length === 0) {
 //       return res.status(404).send({ message: 'No results match this query' });
 //     }
@@ -349,7 +372,7 @@ exports.getTourDetails = async (req, res) => {
 //     const userId = new mongoose.Types.ObjectId(req.user._id);
 
 //     const tour = await Tour.deleteOne({_id:tourId, user:{$eq:userId}});
-    
+
 //     if (!tour) {
 //       return res.status(404).send({message:"Error deleting tour"});
 //     }
@@ -375,7 +398,7 @@ exports.getTourDetails = async (req, res) => {
 //     // Search on Database
 //     let data = await Nearby.findOne({country:country})
 //     let result = data.locations[location]??[]
-    
+
 //     if (result.length === 0) {
 //       return res.status(404).send({ message: 'No results match this query' });
 //     }
@@ -402,7 +425,6 @@ exports.getTourDetails = async (req, res) => {
 //   }
 // }
 
-
 // Get All Tours with pagination (complete)
 exports.getActivitiesTour = async (req, res) => {
   try {
@@ -414,33 +436,32 @@ exports.getActivitiesTour = async (req, res) => {
 
     // Fetch tours with filtering and pagination
     const tours = await Tour.find({
-      category: "67d329b4c523a039ff263649"
+      category: "67d329b4c523a039ff263649",
     })
       .skip(skip)
       .limit(limit)
-      .select('title price currency duration destination maxGroupSize images')
+      .select("title price currency duration destination maxGroupSize images");
 
-    const totalTours = await Tour.countDocuments({category: "67d329b4c523a039ff263649"});
+    const totalTours = await Tour.countDocuments({ category: "67d329b4c523a039ff263649" });
 
     res.status(200).json({
-      status: 'success',
-      message: 'Activity fetched successfully',
+      status: "success",
+      message: "Activity fetched successfully",
       data: tours,
       pagination: {
         page: parseInt(page),
         total: totalTours,
         totalPages: Math.ceil(totalTours / limit),
-      }
-      
+      },
     });
   } catch (err) {
-    console.log(err)
-    res.status(500).json({ status: 'error', message: 'Internal server error', error: err.message });
+    console.log(err);
+    res.status(500).json({ status: "error", message: "Internal server error", error: err.message });
   }
 };
 
 exports.getPopularTours = async (req, res) => {
-  const PAGE_SIZE = 10
+  const PAGE_SIZE = 10;
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || PAGE_SIZE;
   const minReviews = 5; // Default minimum reviews: 5
@@ -454,11 +475,11 @@ exports.getPopularTours = async (req, res) => {
       rating: { $gte: 4 },
       ratingQuantity: { $gte: minReviews },
     })
-    .populate({
-      path: "category",
-      select: "name",
-    })
-    .select("title category destination rating price currency images startDate endDate")
+      .populate({
+        path: "category",
+        select: "name",
+      })
+      .select("title category destination rating price currency images startDate endDate")
       .sort({ rating: -1, ratingQuantity: -1 })
       .skip(skip)
       .limit(limit);
@@ -494,7 +515,7 @@ exports.addOrRemoveFavorite = async (req, res) => {
 
   const userId = req.user._id;
 
-  if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(tourId))   {
+  if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(tourId)) {
     return res.status(400).json({ status: "fail", message: "Invalid user ID or tour ID" });
   }
 
@@ -516,4 +537,4 @@ exports.addOrRemoveFavorite = async (req, res) => {
     console.error("Error updating favorites:", error);
     return res.status(500).json({ status: "error", message: "Internal server error" });
   }
-}
+};

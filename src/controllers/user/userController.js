@@ -96,7 +96,7 @@ exports.loginUser = async (req, res) => {
       return res.status(401).send({ status: "fail", message: "No user found" });
     }
 
-    if (!user.isVerified) {
+    if (!user.isVerified || !user.role !== "user") {
       return res.status(400).json({
         status: "fail",
         message: "Please verify your email",
