@@ -2,14 +2,15 @@ const mongoose = require("mongoose");
 
 const FavoriteTourSchema = new mongoose.Schema(
   {
-    user : { 
+    user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "UserProfile",
-      required: true },
-    tour: { 
+      required: true,
+    },
+    tour: {
       type: mongoose.Schema.Types.ObjectId,
-      ref:"Tour",
-      required: true 
+      ref: "Tour",
+      required: true,
     },
   },
   { timestamps: true }

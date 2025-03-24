@@ -22,6 +22,7 @@ const tourRouter = require("./src/routes/tourRouter");
 const guideRouter = require("./src/routes/guideRouter");
 const categoryRouter = require("./src/routes/categoryRouter");
 const { logger } = require("./src/utils/logger");
+const { optionalAuth } = require("./src/middlewares/auth");
 
 //    =========    MIDDLEWARE     ========
 
@@ -76,7 +77,7 @@ app.use("/api/v2/users", userRouter);
 app.use("/api/v2/admin", adminRouter); //done
 app.use("/api/v2/org", orgRouter); //done
 app.use("/api/v2/category", categoryRouter); //done
-app.use("/api/v2/tours", tourRouter);
+app.use("/api/v2/tours", optionalAuth, tourRouter);
 app.use("/api/v2/guides", guideRouter);
 
 //! requests that pass the route handlers --> not caught

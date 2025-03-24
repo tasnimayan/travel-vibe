@@ -177,25 +177,34 @@ exports.getAllTours = async (req, res) => {
     const skip = (page - 1) * limit; // Skip items for pagination
 
     // Fetch tours with filtering and pagination
-    const tours = await Tour.find(req.filter)
-      .skip(skip)
-      .limit(limit)
-      .populate({
-        path: "createdBy",
-        localField: "createdBy",
-        foreignField: "user",
-        justOne: true,
-        select: "-_id name profileImage rating",
-      })
-      .select(
-        "title description price currency startDate endDate duration destination maxGroupSize highlightedPlaces images rating ratingQuantity createdBy"
-      );
+    let query = Tour.find(req.filter).skip(skip).limit(limit).populate({
+      path: "createdBy",
+      localField: "createdBy",
+      foreignField: "user",
+      justOne: true,
+      select: "-_id name profileImage rating",
+    });
+
+    // If user is logged in, lookup favorites
+    if (req.user) {
+      query = query.populate({
+        path: "favorites",
+        match: { user: req.user._id },
+        select: "user",
+      });
+    }
+
+    const tours = await query.select(
+      "title description price currency startDate endDate duration destination maxGroupSize highlightedPlaces images rating ratingQuantity createdBy"
+    );
 
     const totalTours = await Tour.countDocuments(req.filter);
 
     const transformedTours = tours.map((tour) => {
       const tourObject = tour.toObject();
       tourObject.images = tourObject.images.length > 0 ? [tourObject.images[0]] : [];
+      tourObject.isFavorite = tourObject.favorites.length > 0;
+      delete tourObject.favorites;
       return tourObject;
     });
 
@@ -516,7 +525,7 @@ exports.addOrRemoveFavorite = async (req, res) => {
   const userId = req.user._id;
 
   if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(tourId)) {
-    return res.status(400).json({ status: "fail", message: "Invalid user ID or tour ID" });
+    return res.status(400).json({ status: "fail", message: "Invalid user or tour ID" });
   }
 
   try {
