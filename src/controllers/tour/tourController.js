@@ -202,8 +202,8 @@ exports.getAllTours = async (req, res) => {
 
     const transformedTours = tours.map((tour) => {
       const tourObject = tour.toObject();
-      tourObject.images = tourObject.images.length > 0 ? [tourObject.images[0]] : [];
-      tourObject.isFavorite = tourObject.favorites.length > 0;
+      tourObject.images = tourObject.images?.length > 0 ? [tourObject.images[0]] : [];
+      tourObject.isFavorite = tourObject.favorites?.length > 0;
       delete tourObject.favorites;
       return tourObject;
     });
@@ -545,5 +545,41 @@ exports.addOrRemoveFavorite = async (req, res) => {
   } catch (error) {
     console.error("Error updating favorites:", error);
     return res.status(500).json({ status: "error", message: "Internal server error" });
+  }
+};
+
+
+exports.getOrganizationTours = async (req, res) => {
+  try {
+    // Pagination and Filtering
+    const PAGE_SIZE = 6; // Default page size
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || PAGE_SIZE;
+    const skip = (page - 1) * limit; // Skip items for pagination
+
+    // Fetch tours with filtering and pagination
+    let query = Tour.find({createdBy: req.user._id}).skip(skip).limit(limit)
+
+    const tours = await query.select(
+      "title description price currency startDate endDate country destination status maxGroupSize"
+    );
+
+    const totalTours = await Tour.countDocuments({createdBy: req.user._id});
+
+    const transformedTours = tours.map((tour) => tour.toObject());
+
+    res.status(200).json({
+      status: "success",
+      message: "Tours fetched successfully",
+      data: transformedTours,
+      pagination: {
+        page: parseInt(page),
+        total: totalTours,
+        totalPages: Math.ceil(totalTours / limit),
+      },
+    });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ status: "error", message: "Internal server error", error: err.message });
   }
 };
