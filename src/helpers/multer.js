@@ -12,6 +12,7 @@ const fs = require('fs')
 
 // upload.none()   for text only form data
 
+// const memoryStorage = multer.memoryStorage();
 const storage = multer.diskStorage(
   {
     destination: function(req, file, cb){

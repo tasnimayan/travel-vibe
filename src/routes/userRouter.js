@@ -1,22 +1,29 @@
 const express = require('express')
-const router = express.Router()
 const upload = require('../helpers/multer')
 
-const {signUp, loginUser, logoutUser, updateUser, getUser, updatePassword, deleteUser, forgotPassword, resetPassword, getUserProfile, VerifyOTP} = require('../controllers/user/userController');
-const {isAuthorized, isAvailableFor} = require('../middlewares/auth')
+const {signUp, loginUser, logoutUser, updateUser, getUser, deleteUser, getUserProfile} = require('../controllers/user/userController');
+const {isAuthorized, isAvailableFor} = require('../middlewares/auth');
+const { verifyOTP, resendOTP } = require('../controllers/auth/otp');
+const { updatePassword, forgotPassword, resetPassword } = require('../controllers/auth/password');
 
+const router = express.Router()
+// these routes will start with '/api/v2/users'
 
-router.get('/user', isAuthorized, getUser)
+// router.get('/user', isAuthorized, getUser)
 router.post('/signup', signUp)
 router.post('/login', loginUser)
-router.get('/verify/:otp', isAuthorized, VerifyOTP)
-router.get('/logout', isAuthorized, isAvailableFor('user', 'org', 'admin'), logoutUser)
-router.get('/profile', isAuthorized, isAvailableFor('user', 'org'), getUserProfile)  // User profile
-router.post('/profile/update', isAuthorized, isAvailableFor('user', 'org'), upload.single('avatar'), updateUser)
-router.post('/update/password', isAuthorized, updatePassword)
-router.patch('/account/delete/', isAuthorized, deleteUser)
-router.post('/account/recover/', forgotPassword)
-router.patch('/account/recover/:token', resetPassword);
+router.post('/verify/otp', verifyOTP)
+router.post('/otp/resend', resendOTP)
+router.get('/user', isAuthorized, getUser)
+
+// yet to work for v2
+// router.get('/logout', isAuthorized, isAvailableFor('user', 'organization', 'admin'), logoutUser)
+// router.get('/profile', isAuthorized, isAvailableFor('user', 'organization'), getUserProfile)  // User profile
+// router.post('/profile/update', isAuthorized, isAvailableFor('user', 'organization'), upload.single('avatar'), updateUser)
+// router.post('/update/password', isAuthorized, updatePassword)
+// router.patch('/account/delete/', isAuthorized, deleteUser)
+// router.post('/account/recover/', forgotPassword)
+// router.patch('/account/recover/:token', resetPassword);
 
 
 module.exports = router;

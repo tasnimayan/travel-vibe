@@ -1,109 +1,138 @@
-const mongoose = require('mongoose');
-const Organization = require('./organization')
-
+// updated:
+const mongoose = require("mongoose");
+const { packageSchema } = require("./tourPackage");
+const COUNTRY_CODES = require("../lib/countryCode");
+const Policy = require("./policy");
+const Organization = require("./organization");
 
 const tourSchema = mongoose.Schema(
   {
-    orgId:{
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Organization',
-      required:true,
-		},
-    category:{
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Category',
-      required:true,
-		},
-    title: {type:String, trim:true, required:true},
-    startLocation:{type:String, required:true},
-    destination:{type:String},
-    duration:{type:String},
-    description:{type:String, trim:true},
-    packages:[
+    // _id - will be auto generated
+    title: { type: String, trim: true, required: true },
+    description: { type: String, trim: true },
+    price: { type: Number, required: true, min: 0 },
+    bookingDeposit: { type: Number, min: 0 },
+    discountPercentage: { type: Number, default: 0, min: 0, max: 100 },
+    discountAmount: {
+      type: Number,
+      required: false,
+      default: 0,
+      min: 0,
+    },
+    currency: { type: String, enum: ["BDT", "USD", "EUR", "INR", "GBP"], default: "USD" },
+    startDate: { type: Date },
+    endDate: { type: Date },
+    duration: { type: String },
+    images: [String],
+    destination: { type: String },
+    highlightedPlaces: [{ type: String }],
+    maxGroupSize: { type: Number, min: 1 },
+    pickupPoint: [String],
+    departureTime: { type: Date },
+    rating: { type: Number, default: 0, max: 5, set: (val) => ((val * 10) / 10).toFixed(2) },
+    ratingQuantity: { type: Number },
+    packages: [packageSchema],
+    amenities: [{ type: String }],
+    itinerary: [
       {
-        name: String,
-        description: String,
-        price: Number
-      }
+        title: { type: String, required: true },
+        activities: [
+          {
+            title: { type: String, required: true },
+            description: { type: String, required: true },
+          },
+        ],
+      },
     ],
-    personCapacity: {type:Number},
-    itinerary:[
-      {
-        day: Number,
-        activity: String,
-        description: String
-      }
-    ],
-    images:[String],
-    price:{type:Number, required:true, min:0},
-    bookingMoney:{type:Number},
-    ratingsAverage:{type:Number, min:1, max:5, set: val => ((val * 10) / 10).toFixed(2)},
-    ratingsQuantity: {type:Number, default:0},
-    startDate:{type:Date},
-    startTime:{type:Date},
-    policy:{type:String},
-    react:[],
-    comments:[],
-    country:{type:String},
-    discountRate: {type:Number, default:0}
+    country: { type: String },
+    countryCode: { type: String, uppercase: true, enum: Object.keys(COUNTRY_CODES), required: true },
+    tags: [{ type: String }],
+    status: { type: String, enum: ["upcoming", "ongoing", "completed"], default: "ongoing" },
+    isActive: { type: Boolean, default: true },
+
+    policy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Policy",
+    },
+    category: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "TourCategory",
+      required: true,
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Organization",
+      required: true,
+    },
   },
   {
-    timestamps:true,
+    timestamps: true,
     toJSON: { virtuals: true },
-    toObject: { virtuals: true }
+    toObject: { virtuals: true },
   }
-)
+);
 
-tourSchema.index({ startDate: 1, destination: 1 });
+tourSchema.index({ startDate: 1, country: 1, category: 1 });
 
-tourSchema.virtual('reviews', {
-	ref: 'Review',
-	localField: '_id',
-	foreignField: 'tour',
+// Calculate finalPrice before providing the data to user
+tourSchema.virtual("finalPrice").get(function () {
+  if (this.discountAmount > 0) return this.price - this.discountAmount;
+  if (this.discountPercentage > 0) return Math.round(this.price * (1 - this.discountPercentage / 10000) * 100) / 100;
+  return this.price;
 });
 
-tourSchema.virtual('bookings', {
-	ref: 'Booking',
-	localField: '_id',
-	foreignField: 'tour',
-});
-
-tourSchema.virtual('finalPrice').get(()=> {
-  return this.price - (this.discountRate || 0);
-});
-
-tourSchema.methods.isDiscounted = ()=> {
-  return this.discountRate > 0;
+tourSchema.methods.isDiscounted = () => {
+  return this.discountPercentage > 0;
 };
 
+tourSchema.virtual("createdByDetails", {
+  ref: "Organization",
+  localField: "createdBy",
+  foreignField: "user",
+  justOne: true,
+  select: "name profileImage rating",
+});
+
+tourSchema.virtual("reviews", {
+  ref: "TourReview",
+  localField: "_id",
+  foreignField: "tour",
+});
+
+tourSchema.virtual("policyDetails", {
+  ref: "Policy",
+  localField: "policy",
+  foreignField: "_id",
+  justOne: true,
+});
+tourSchema.virtual("favorites", {
+  ref: "Favorite",
+  localField: "_id",
+  foreignField: "tour",
+});
 
 tourSchema.methods.toJSON = function () {
-	const tour = this.toObject();
-	delete tour.__v;
+  const tour = this.toObject();
+  delete tour.__v;
 
-	return tour;
+  return tour;
 };
 
-//  Saves the tour data to the user's userTours field
-tourSchema.pre('save', async function (next) {
-	const org = await Organization.findOne({_id:this.orgId});
-	if ( this.isNew) {
-		org.tours.push(this._id);
-    await org.save()
+tourSchema.pre("save", async function (next) {
+  if (this.countryCode) {
+    this.country = COUNTRY_CODES[this.countryCode];
   }
-	next();
+  next();
 });
 
-// Populate relational data to the output
-tourSchema.pre(/^find/, function (next) {
-	this.populate({
-		path: 'orgId',
-		select: 'name photo address',
-	});
-	next();
+tourSchema.pre(["updateOne", "findOneAndUpdate"], function (next) {
+  const update = this.getUpdate();
+  if (update.countryCode) {
+    update.country = COUNTRY_CODES[update.countryCode.toUpperCase()];
+  }
+  next();
 });
 
-
-const Tour = mongoose.model('Tour', tourSchema);
+const Tour = mongoose.model("Tour", tourSchema);
 
 module.exports = Tour;

@@ -1,28 +1,23 @@
-const dotenv = require("dotenv");
-const path = require("path");
-
+import * as dotenv from "dotenv";
 dotenv.config();
 
-const express = require("express");
-const cors = require("cors");
-const rateLimit = require("express-rate-limit");
-const mongoSanitize = require("express-mongo-sanitize");
-const cookieParser = require("cookie-parser");
-const morgan = require("morgan");
-const mongoose = require("mongoose");
+import path from "path";
+import express from "express";
+import cors from "cors";
+import rateLimit from "express-rate-limit";
+import mongoSanitize from "express-mongo-sanitize";
+import cookieParser from "cookie-parser";
+import morgan from "morgan";
+import mongoose from "mongoose";
 
 // Express App
 const app = express();
 
 // Import routers
-const userRouter = require("./src/routes/userRouter");
-const adminRouter = require("./src/routes/adminRouter");
-const orgRouter = require("./src/routes/organizationRouter");
-const tourRouter = require("./src/routes/tourRouter");
-const guideRouter = require("./src/routes/guideRouter");
-const categoryRouter = require("./src/routes/categoryRouter");
-const { logger } = require("./src/utils/logger");
-const { optionalAuth } = require("./src/middlewares/auth");
+const userRouter = require("./routes/userRouter");
+const tourRouter = require("./routes/tourRouter");
+const categoryRouter = require("./routes/categoryRoute");
+const guideRouter = require("./routes/guideRouter");
 
 //    =========    MIDDLEWARE     ========
 
@@ -58,9 +53,8 @@ if (process.env.NODE_ENV === "development") {
 }
 
 // ========   Database Connection   ========
-// mongoose.set('debug', process.env.NODE_ENV === 'development');
 mongoose
-  .connect(process.env.DATABASE, { autoIndex: true }) //,{autoIndex:false}
+  .connect(process.env.DATABASE, { autoIndex: false })
   .then(() => console.log("MONGODB connection successful"))
   .catch((err) => console.log(err));
 
@@ -73,26 +67,23 @@ app.get("/api", (req, res) => {
   res.status(200).send({ message: "API is currently running" });
 });
 
-app.use("/api/v2/users", userRouter);
-app.use("/api/v2/admin", adminRouter); //done
-app.use("/api/v2/org", orgRouter); //done
-app.use("/api/v2/category", categoryRouter); //done
-app.use("/api/v2/tours", optionalAuth, tourRouter);
-app.use("/api/v2/guides", guideRouter);
+app.use("/api/v1/users", userRouter);
+app.use("/api/v1/tours", tourRouter);
+app.use("/api/v1/category", categoryRouter);
+app.use("/api/v1/guides", guideRouter);
 
 //! requests that pass the route handlers --> not caught
 
 app.all("*", (req, res, next) => {
   const err = new Error(`No route found at ${req.originalUrl}`);
-  if (!err.statusCode) err.statusCode = 404;
+  if (err.statusCode) err.statusCode = 404;
   next(err);
 });
 
 //* GLOBAL ERROR MIDDLEWARE
-app.use(async (err, req, res, next) => {
-  await logger(err, req);
+app.use((err, req, res, next) => {
   err.statusCode = err.statusCode || 500;
   res.status(err.statusCode).send({ message: err });
 });
 
-module.exports = app;
+export default app;

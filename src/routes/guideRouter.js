@@ -1,10 +1,9 @@
-const express = require('express')
-const { getGuideDetails, getAllGuides, getSearchedGuide } = require('../controllers/guide/guideController')
-const router = express.Router()
+const express = require("express");
+const { getGuides, getGuideDetails } = require("../controllers/guide/guideController");
+const router = express.Router();
 
-router.get('/',getAllGuides)
-router.get('/profile/:guideId',getGuideDetails)
-router.get('/search', getSearchedGuide)
-
+// Base route: /api/v2/guides
+router.get("/", getGuides);
+router.get("/:guideId", getGuideDetails);
 
 module.exports = router;

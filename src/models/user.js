@@ -1,228 +1,289 @@
-const mongoose = require('mongoose')
-const { isEmail } = require('validator');
-// const bcrypt = require('bcrypt')
-const jwt = require('jsonwebtoken');
-const crypto = require('crypto')
+/**
+ * This User schema is for all kind of user login info
+ */
+const mongoose = require("mongoose");
+const { isEmail } = require("validator");
+const { hashPassword, comparePassword } = require("../utils/auth");
+const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCK_TIME = 15 * 60 * 1000; // 15 minutes in milliseconds
 
-// User password update does not triggers pre method
-
-// Creating User Schema
 const userSchema = new mongoose.Schema(
-	{
-		name: {
-			type: String,
-			trim: true,
-			required: true,
-			minLength: 2,
-			maxLength: 99,
-		},
-
-		email: {
-			type: String,
-			trim: true,
-			required: true,
-			unique: true,
-			lowercase: true,
-			validate(value) {
-				if (!isEmail(value)) {
-					throw new Error('Invalid email format!');
-				}
-			},
-		},
-
-		password: {
-			type: String,
-			trim: true,
-			required: true,
-			minlength: 6,
-			validate(value) {
-				if (value.toLowerCase().includes('password')) {
-					throw new Error('Password cannot contain -password-');
-				}
-			},
-		},
-
-		address:{
-			country: {type:String},
-			city:{type:String},
-			add:{
-				type: String,
-				trim: true,
-				minLength: 2,
-				maxLength: 99
-			}
-
-		},
-
-		photo: {
-			type: String,
-			default: 'default.jpg',
-		},
-
-		userReviews: [
-			{
-				type: mongoose.Schema.Types.ObjectId,
-				ref: 'Review',
-			},
-		],
-
-		userTours: [
-			{
-				type: mongoose.Schema.Types.ObjectId,
-				ref: 'Tour',
-			},
-		],
-
-		token: {
-			type: String,
-		},
-
-		role: {
-			type: String,
-			default: 'user',
-		},
-
-		active: {
-			type: Boolean,
-			default: true,
-		},
-		otp:{type: String},
-		isVerified:{type: Boolean, default:false},
-	
-		passwordChangedAt: Date,
-		resetPasswordToken: String,
-		resetPasswordExpires: Date,
-	},
-
-	{ timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true }  }
+  {
+    displayName: { type: String, trim: true },
+    email: {
+      type: String,
+      required: true,
+      unique: [true, "User already exists with this email"],
+      trim: true,
+      lowercase: true,
+      validate(value) {
+        if (!isEmail(value)) {
+          throw new Error("Invalid email format!");
+        }
+      },
+    },
+    password: {
+      type: String,
+      trim: true,
+      // required: true,
+      minlength: 8,
+      validate(value) {
+        if (value.toLowerCase().includes("password")) {
+          throw new Error("Password cannot contain -password-");
+        }
+        if (value.toLowerCase() === "12345678") {
+          throw new Error("Password is very weak");
+        }
+      },
+    },
+    oauthProvider: {
+      type: String, // e.g., 'google', 'facebook'
+    },
+    oauthId: {
+      type: String,
+    },
+    role: {
+      type: String,
+      enum: ["organization", "guide", "user", "hotel", "admin"],
+      required: true,
+    },
+    passwordResetToken: String,
+    resetTokenExpiresAt: Date,
+    lastPasswordChangedAt: Date,
+    loginAttempts: {
+      type: Number,
+      default: 0,
+    },
+    lockUntil: Date,
+    otp: {
+      type: Number,
+      default: null,
+    },
+    otpExpiresAt: {
+      type: Date,
+    },
+    otpRequestCount: {
+      type: Number,
+      default: 0,
+    },
+    otpRequestCountResetAt: {
+      type: Date,
+      default: Date.now,
+    },
+    rememberedAt: {
+      type: Date,
+      default: null,
+    },
+    isVerified: Boolean,
+  },
+  {
+    timestamps: true,
+    versionKey: false,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+    id: false,
+  }
 );
 
+// Indexes
+userSchema.index({ email: 1 }, { unique: true });
+userSchema.index({ role: 1 });
 
-
-// Method to hide unnecessary fields to 'user' role 
+// Method to hide unnecessary fields to 'user' role
 userSchema.methods.toJSON = function () {
-	const user = this.toObject();
+  const user = this.toObject();
 
-	if (user.role === 'user' || user.role === 'org') {
-		delete user.password;
-		delete user.passwordChangedAt;
-		delete user.resetPasswordToken;
-		delete user.resetPasswordExpires;
-		delete user.createdAt;
-		delete user.updatedAt;
-		delete user.active;
-		delete user.token;
-		delete user.userReviews;
-		delete user.userTours;
-		delete user.__v;
-		delete user.id;
-	}
+  delete user.password;
+  delete user.passwordResetToken;
+  delete user.resetTokenExpiresAt;
+  delete user.lastPasswordChangedAt;
+  delete user.otp;
+  delete user.otpExpiresAt;
+  delete user.otpRequestCount;
+  delete user.otpRequestCountResetAt;
+  delete user.rememberedAt;
+  delete user.loginAttempts;
+  delete user.createdAt;
+  delete user.updatedAt;
 
-	return user;
+  return user;
 };
 
+// email password login validator
+userSchema.statics.login = async function (email, password) {
+  try {
+    const user = await this.findOne({ email: email.toLowerCase() });
 
-// Static methods that can be called on Model instead of instance of model
-userSchema.statics.loginUser = async (email, password) => {
+    if (!user) {
+      throw new Error("Invalid login credentials");
+    }
 
-	const user = await User.findOne({ email });
+    if (user.lockUntil && user.lockUntil > Date.now()) {
+      const remainingTime = Math.ceil((user.lockUntil - Date.now()) / 1000 / 60); // Convert to minutes
+      throw new Error(`Account is locked. Please try again in ${remainingTime} minutes`);
+    }
 
-	if (!user || user.active === false) {
-		throw new Error('Account is not active');
-	}
+    // Verify password
+    const isMatch = await comparePassword(password, user.password);
 
-	const match = await user.comparePassword(password, user.password);
+    if (!isMatch) {
+      user.loginAttempts += 1;
 
-	if (!match) {
-		throw new Error("Password does not match");
-	}
+      // Check if we need to lock the account
+      if (user.loginAttempts >= MAX_LOGIN_ATTEMPTS) {
+        user.lockUntil = Date.now() + LOCK_TIME;
+      }
 
-	return user;
+      await user.save();
+      throw new Error("Invalid login credentials");
+    }
+
+    // Reset login attempts on successful login
+    if (user.loginAttempts !== 0 || user.lockUntil) {
+      user.loginAttempts = 0;
+      user.lockUntil = undefined;
+      await user.save();
+    }
+
+    return user;
+  } catch (error) {
+    throw error;
+  }
 };
 
-// Static method to validate Authentication Token
+// Static method to validate Auth JWT Token
 userSchema.statics.validateToken = async function (token) {
-	const decoded = jwt.verify(token, process.env.JWT_SECRET);
+  try {
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) throw new Error("JWT_SECRET environment is not provided.");
 
-	const user = await User.findOne({ _id: decoded._id });
-	if (!user) {
-		throw new Error("Invalid token");
-	}
+    const decoded = jwt.verify(token, jwtSecret);
 
-	return user.toJSON();
+    const user = await this.findOne({
+      _id: decoded._id,
+      email: decoded.email,
+    }).select("-password -passwordResetToken -resetTokenExpiresAt -otp");
+
+    if (!user) {
+      throw new Error("User not found or token invalid");
+    }
+
+    // Check if token issued before password change
+    if (user.lastPasswordChangedAt) {
+      const tokenIssuedAt = decoded.iat * 1000;
+      if (tokenIssuedAt < user.lastPasswordChangedAt.getTime()) {
+        throw new Error("Token invalid due to password change");
+      }
+    }
+
+    // Check if user is locked
+    if (user.lockUntil && user.lockUntil > Date.now()) {
+      throw new Error("Account is locked");
+    }
+
+    return user.toJSON();
+  } catch (error) {
+    if (error.name === "JsonWebTokenError") {
+      throw new Error("Invalid token");
+    }
+    if (error.name === "TokenExpiredError") {
+      throw new Error("Token has expired");
+    }
+    throw error;
+  }
 };
 
 // Custom method to generate token for authentication when user logs in or create account
 userSchema.methods.generateToken = async function () {
-	const user = this;
+  const user = this;
 
-	const token = jwt.sign({ _id: user._id.toString() }, process.env.JWT_SECRET, {
-		expiresIn: process.env.JWT_EXPIRES,
-	});
+  if (!user._id || !user.email || !user.role) {
+    throw new Error("Required user properties missing for token generation");
+  }
 
-	user.token = token;
-	await user.save();
+  const tokenPayload = {
+    _id: user._id.toString(),
+    email: user.email,
+    role: user.role,
+    iat: Math.floor(Date.now() / 1000),
+  };
+  const jwtSecret = process.env.JWT_SECRET;
+  if (!jwtSecret) throw new Error("JWT_SECRET environment is not provided.");
 
-	return token;
+  const token = jwt.sign(tokenPayload, jwtSecret, {
+    expiresIn: process.env.JWT_EXPIRES,
+  });
+
+  return token;
 };
 
-userSchema.methods.createPasswordResetToken = async function () {
-	const resetToken = crypto.randomBytes(32).toString('hex');
+// method for creating password reset token to verify
+userSchema.statics.createPasswordResetToken = async function (email) {
+  const user = await this.findOne({ email: email.toLowerCase() });
 
-	//hashing the reset token
-	this.resetPasswordToken = crypto
-		.createHash('sha256')
-		.update(resetToken)
-		.digest('hex');
+  if (!user) {
+    throw new Error("No user found with this email address");
+  }
 
-	this.resetPasswordExpires = Date.now() + 1000 * 60 * 30; //30 min
-	return resetToken;
+  // Generate random reset token
+  const resetToken = crypto.randomBytes(32).toString("hex");
+
+  // Hash token before saving to database
+  user.passwordResetToken = crypto.createHash("sha256").update(resetToken).digest("hex");
+
+  // Token expires in 1 hour
+  user.resetTokenExpiresAt = Date.now() + 1000 * 60 * 60;
+
+  await user.save();
+
+  return resetToken;
 };
 
-// // Comparing password with hashed one
-// userSchema.methods.comparePassword = async function (plainPw, userPw) {
-// 	return await bcrypt.compare(plainPw, userPw);
-// };
+// Static method to verify reset token and update password
+userSchema.statics.resetPassword = async function (resetToken, newPassword) {
+  // Hash the token to compare with stored hash
+  const hashedToken = crypto.createHash("sha256").update(resetToken).digest("hex");
 
+  const user = await this.findOne({
+    passwordResetToken: hashedToken,
+    resetTokenExpiresAt: { $lt: Date.now() },
+  });
 
-// //* pre-save HASH hook --> works on create-save-update
-// userSchema.pre('save', async function (next) {
-// 	const user = this;
+  if (!user) {
+    throw new Error("Invalid or expired reset token");
+  }
 
-// 	if (user.isModified('password') || user.isNew) {
-// 		user.password = await bcrypt.hash(user.password, 10);
-// 		user.passwordChangedAt = Date.now() - 1000;
-// 	}
-// 	next();
-// });
+  // Update password and clear reset token fields
+  user.password = newPassword;
+  user.passwordResetToken = undefined;
+  user.resetTokenCreatedAt = undefined;
 
-// =================== This code block is to replace bcrypt that does not supported in shared hosting
-// Comparing password with hashed one
+  await user.save();
 
-userSchema.methods.comparePassword = async function (plainPw, userPw) {
-	if (hashPassword(plainPw) === userPw) {
-		return true;
-	}
-	return false;
+  return user;
 };
 
+// pre-save hook to hash password before saving
+userSchema.pre("save", async function (next) {
+  const user = this;
+  user.updatedAt = Date.now();
 
-const hashPassword = password => {
-	return crypto.createHash('sha256').update(password).digest('hex')
-}
-//* pre-save HASH hook --> works on create-save-update
-userSchema.pre('save', async function (next) {
-	const user = this;
-	
-	if (user.isModified('password') || user.isNew) {
-		user.password = await hashPassword(user.password);
-		user.passwordChangedAt = Date.now() - 1000;
-	}
-	next();
+  // Only hash the password if it has been modified
+  if (!user.isModified("password")) {
+    return next();
+  }
+
+  try {
+    user.password = await hashPassword(user.password);
+    user.lastPasswordChangedAt = Date.now();
+    next();
+  } catch (error) {
+    next(error);
+  }
 });
 
-// ==============================================
-
-const User = new mongoose.model('User', userSchema)
+const User = mongoose.model("User", userSchema);
 module.exports = User;

@@ -1,3 +1,7 @@
 /node_modules
 .env
 /public
+V2Changes.txt
+temp.js
+test.js
+/logs

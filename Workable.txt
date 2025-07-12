@@ -1,3 +1,6 @@
+API Response structure
+{status:"success/fail", message:"", data: ""}
+
 =========== User Routes ============
 '/signup'
 '/login'
